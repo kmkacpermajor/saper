@@ -3,7 +3,12 @@
   "name": "minesweeper-server",
   "version": "1.0.0",
   "dependencies": {
-    "bson": "^6.10.3",
-    "ws": "^8.18.1"
+    "nodemon": "^3.1.10",
+    "ws": "^8.18.1",
+    "yarn": "^1.22.22"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "npx nodemon src/index.js"
   }
 }

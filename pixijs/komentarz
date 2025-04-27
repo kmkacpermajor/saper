@@ -1,3 +1,0 @@
-nie przetrzymujemy stanu gry u klienta, prosimy serwer o to co jest na planszy
-przetrzymujemy tylko stan planszy (czyli obraz prezentacyjny) - następnie go renderujemy (przez pixijs)
-kliknięcie wysyła komunikat o kliknięciu, który jest przetwarzany przez serwer, następnie odsyłany jest broadcast do wszystkich graczy o aktualizacji planszy

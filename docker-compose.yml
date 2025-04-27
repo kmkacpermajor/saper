@@ -1,0 +1,28 @@
+services:
+  # Frontend (Vite + PixiJS)
+  frontend:
+    build:
+      context: pixijs/
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173" # Vite dev server port
+    volumes:
+      - ./pixijs/:/app # Live code updates
+      - /app/node_modules # Isolate node_modules
+    environment:
+      - NODE_ENV=development
+
+  # Backend (WebSocket server)
+  backend:
+    build:
+      context: server/
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" # WebSocket server port
+    volumes:
+      - ./server/:/app # Live code updates
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - frontend

@@ -3,10 +3,7 @@ export default class Tile {
         this.x = x;
         this.y = y;
         this.tileSize = tileSize;
-        this.isMine = false;
-        this.isRevealed = false;
-        this.isFlagged = false;
-        this.adjacentMines = 0;
+        this.type = -1;
         this.sprite = this.createSprite(sprite);
     }
 

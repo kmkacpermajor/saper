@@ -34,18 +34,13 @@ export default class Minesweeper {
 
     revealTile(x, y, type) {
         console.log(`Show tile : ${x}, ${y}`)
-        if (this.board[x][y].isRevealed || this.board[x][y].isFlagged) return;
+        this.board[x][y].type = type;
+        this.renderBoard();
 
-        this.board[x][y].isRevealed = true;
-        this.board[x][y].isMine = type === 10;
-        this.board[x][y].isFlagged = type === 9;
-        this.board[x][y].adjacentMines = type < 9 ? type : this.board[x][y].adjacentMines;
-        if (this.board[x][y].isMine) {
+        if (this.board[x][y].type === 10) {
             alert("Game Over!");
             return;
         }
-
-        this.renderBoard();
     }
 
     connect(gameId) {
@@ -57,6 +52,19 @@ export default class Minesweeper {
     }
 
     async init() {
+        // Tworzenie aplikacji PixiJS
+        this.app = new Application();
+        await this.app.init({ 
+            width: this.cols * this.tileSize, height: this.rows * this.tileSize, backgroundColor: 0x1099bb 
+        });
+        document.body.appendChild(this.app.canvas);
+        this.app.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+        this.app.stage.addChild(this.container);
+
+        // Załaduj tekstury
+        await this.loadTextures();
+
         await waitForOpenSocket(this.socket);
 
         this.socket.binaryType = 'arraybuffer';
@@ -66,20 +74,24 @@ export default class Minesweeper {
         this.socket.onmessage = (event) => {
             const data = new DataView(event.data);
             const messageType = data.getUint8(0);
-            console.log('Got message');
+            console.log(`Got message type ${messageType}`);
             
             switch(messageType) {
                 case 0x00: // connected
                     const gameId = data.getUint8(1);
                     this.gameId = gameId;
+                    this.loadBoard();
+                    this.renderBoard();
                     break;
                 case 0x01: // revealTiles
                     const tileCount = data.getUint8(1);
-                    for (let i = 0; i < tileCount; i++) {
+                        console.log(`${tileCount}`);
+                        for (let i = 0; i < tileCount; i++) {
                         const offset = 2 + i * 5;
                         const x = data.getUint16(offset);
                         const y = data.getUint16(offset + 2);
-                        const type = data.getUint8(offset + 4);
+                        const type = data.getInt8(offset + 4);
+                        console.log(`${x}, ${y}, ${type}`);
                         this.revealTile(x,y, type);
                     }
                     break;
@@ -96,23 +108,6 @@ export default class Minesweeper {
                     console.error('Unknown message type:', messageType);
             }
         };
-
-        // Tworzenie aplikacji PixiJS
-        this.app = new Application();
-        await this.app.init({ 
-            width: this.cols * this.tileSize, height: this.rows * this.tileSize, backgroundColor: 0x1099bb 
-        });
-        document.body.appendChild(this.app.canvas);
-        this.app.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
-
-        this.app.stage.addChild(this.container);
-
-        // Załaduj tekstury
-        await this.loadTextures();
-
-        // Tworzenie planszy i sprite'ów po załadowaniu tekstur
-        this.loadBoard();
-        this.renderBoard();
     }
 
     async loadTextures() {
@@ -125,7 +120,7 @@ export default class Minesweeper {
     }
 
     sendShowTile(tile) {
-        if (this.board[tile.x][tile.y].isRevealed) return;
+        if (this.board[tile.x][tile.y].type !== -1) return;
         const buf = new ArrayBuffer(5);
         const view = new DataView(buf);
         view.setUint8(0, 0x81);
@@ -147,7 +142,7 @@ export default class Minesweeper {
                 const tile = new Tile(x, y, this.tileSize, new Sprite(this.textures.default));
                 tile.sprite.on("pointerdown", (event) => {
                     if (event.button === 0) this.sendShowTile(tile);
-                    if (event.button === 2) this.toggleFlag(tile);
+                    if (event.button === 2) this.sendFlagTile(tile);
                 });
                 this.container.addChild(tile.sprite);
                 return tile;
@@ -155,24 +150,32 @@ export default class Minesweeper {
         );
     }
 
-    toggleFlag(tile) {
-        if (!this.board[tile.x][tile.y].isRevealed) {
-            this.board[tile.x][tile.y].isFlagged = !this.board[tile.x][tile.y].isFlagged;
-            this.renderBoard();
-        }
+    sendFlagTile(tile) {
+        console.log(this.board[tile.x][tile.y].type);
+        if (this.board[tile.x][tile.y].type !== -1 && this.board[tile.x][tile.y].type !== 9) return;
+        const buf = new ArrayBuffer(6);
+        const view = new DataView(buf);
+        view.setUint8(0, 0x83);
+        view.setUint16(1, tile.x);
+        view.setUint16(3, tile.y);
+        view.setUint8(5, this.board[tile.x][tile.y].type === 9);
+        this.socket.send(buf);
     }
 
     renderBoard() {
         for (let x = 0; x < this.rows; x++) {
             for (let y = 0; y < this.cols; y++) {
                 const tile = this.board[x][y];
-                tile.sprite.texture = tile.isRevealed
-                    ? tile.isMine
-                        ? this.textures.mine
-                        : this.textures.numbers[tile.adjacentMines]
-                    : tile.isFlagged
-                    ? this.textures.flag
-                    : this.textures.default;
+                tile.sprite.texture = this.textures.default;
+                if (tile.type === -1){
+                    tile.sprite.texture = this.textures.default;
+                }else if(tile.type === 9){
+                    tile.sprite.texture = this.textures.flag;
+                }else if(tile.type === 10){
+                    tile.sprite.texture = this.textures.mine;
+                }else{
+                    tile.sprite.texture = this.textures.numbers[tile.type];
+                }
             }
         }
     }
