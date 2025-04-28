@@ -36,11 +36,6 @@ export default class Minesweeper {
         console.log(`Show tile : ${x}, ${y}`)
         this.board[x][y].type = type;
         this.renderBoard();
-
-        if (this.board[x][y].type === 10) {
-            alert("Game Over!");
-            return;
-        }
     }
 
     connect(gameId) {
@@ -97,17 +92,25 @@ export default class Minesweeper {
                     break;
                     
                 case 0x02: // youLost
-                    handleYouLost();
+                    this.handleYouLost();
                     break;
                     
                 case 0x03: // youWin
-                    handleYouWin();
+                    this.handleYouWin();
                     break;
                     
                 default:
                     console.error('Unknown message type:', messageType);
             }
         };
+    }
+
+    handleYouLost() {
+        alert("You lost!");
+    }
+
+    handleYouWin() {
+        alert("You won!");
     }
 
     async loadTextures() {

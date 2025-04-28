@@ -38,8 +38,6 @@ export default class GameSessionManager {
                 this.games.set(requestedGameId, game);
             }
         }
-        game.addClient(ws);
-
         return game;
     }
 }

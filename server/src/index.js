@@ -15,9 +15,4 @@ wss.on('connection', (ws) => {
     ws.on('message', (message) => {
         messageReceiver.handleMessage(message);
     });
-    
-    ws.on('close', () => {
-        if (messageReceiver.currentGame) messageReceiver.currentGame.removeClient(ws);
-        console.log('Client disconnected');
-    });
 });

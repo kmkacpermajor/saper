@@ -39,33 +39,23 @@ export default class MessageReceiver {
 
         this.currentGame = this.gameSessionManager.getGame(requestedGameId, this.ws);
         
-        // Send confirmation with gameId
-        const buffer = new ArrayBuffer(2);
-        const view = new DataView(buffer);
-        view.setUint8(0, 0x00); // connect response
-        view.setUint8(1, this.currentGame.gameId);
-        this.ws.send(buffer, { binary: true });
+        this.currentGame.messageSender.addClient(this.ws);
 
-        // send flagged tiles
+        this.currentGame.messageSender.sendConfirmation(this.ws, this.currentGame.gameId);
 
-        const shownTiles = [];
-        for (let y = 0; y < this.currentGame.board.board.length; y++) {
-            for (let x = 0; x < this.currentGame.board.board[y].length; x++) {
-                const tile = this.currentGame.board.board[y][x];
-                if (tile.isRevealed || tile.isFlagged) {
-                    shownTiles.push({x, y, type: tile.getType()});
-                }
-            }
-        }
-
-        if(shownTiles) this.currentGame.sendRevealTiles(shownTiles, this.ws);
+        const shownTiles = this.currentGame.board.getShownTiles();
+        if(shownTiles) this.currentGame.messageSender.sendRevealTiles(shownTiles, this.ws);
     }
 
     handleRevealTile(data){
         const x = data.getUint16(1);
         const y = data.getUint16(3);
         console.log(`Server wants to reveal tile ${x}, ${y}`);
-        this.currentGame.sendRevealTiles(this.currentGame.board.tilesToReveal(x, y));
+        let tilesToReveal = this.currentGame.tilesToReveal(x, y);
+        this.currentGame.messageSender.sendRevealTiles(tilesToReveal);
+        if (this.currentGame.getGameEnded() === 0x02){
+            this.currentGame.messageSender.sendGameOver(false);
+        }
     }
 
     handleResetGame(data){
@@ -78,12 +68,14 @@ export default class MessageReceiver {
         const flag = data.getUint8(5);
         if (!flag){
             console.log(`Server wants to flag tile ${x}, ${y}`);
-            this.currentGame.board.board[y][x].isFlagged = true;
-            this.currentGame.sendRevealTiles([{x, y, type: 9}]);
+            // this.currentGame.board.board[y][x].isFlagged = true;
+            this.currentGame.flagTile(x, y);
+            this.currentGame.messageSender.sendRevealTiles([{x, y, type: 9}]);
         }else{
             console.log(`Server wants to unflag tile ${x}, ${y}`);
-            this.currentGame.board.board[y][x].isFlagged = false;
-            this.currentGame.sendRevealTiles([{x, y, type: -1}]);
+            // this.currentGame.board.board[y][x].isFlagged = false;
+            this.currentGame.unflagTile(x, y);
+            this.currentGame.messageSender.sendRevealTiles([{x, y, type: -1}]);
         }
     }
 }

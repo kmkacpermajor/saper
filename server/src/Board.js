@@ -6,9 +6,17 @@ export default class Board {
         this.cols = cols;
         this.mineCount = mineCount;
         this.board = [];
-        this.gameOver = false;
+        this.gameEnded = 0x00;
+        this.numOfRevealedTiles = 0;
 
         this.createBoard();
+    }
+
+    // liczba flag == liczba bomb
+    // pozostałe nieodkryte pola są równe bomby - flagi
+
+    getFlaggedTiles(){
+
     }
 
     createBoard() {
@@ -35,10 +43,10 @@ export default class Board {
     }
 
     tilesToReveal(x, y) {
-        if (this.gameOver || this.board[y][x].isRevealed) return [];
+        if (this.gameEnded || this.board[y][x].isRevealed) return [];
     
         if (this.board[y][x].isMine) {
-            this.gameOver = true;
+            this.gameEnded = 0x02;
             this.board[y][x].isRevealed = true;
             return [{x, y, type: this.board[y][x].getType()}];
         }
@@ -71,7 +79,23 @@ export default class Board {
                 }
             }
         }
+
+        this.numOfRevealedTiles += tilesToReveal.length;
         
         return tilesToReveal;
+    }
+
+    getShownTiles() {
+        const shownTiles = [];
+        for (let y = 0; y < this.board.length; y++) {
+            for (let x = 0; x < this.board[y].length; x++) {
+                const tile = this.board[y][x];
+                if (tile.isRevealed || tile.isFlagged) {
+                    shownTiles.push({x, y, type: tile.getType()});
+                }
+            }
+        }
+
+        return shownTiles;
     }
 }
