@@ -11,8 +11,7 @@ export default class GameSessionManager {
         // Find an available gameId
         for (let gameId = 0; gameId <= MAX_GAME_ID; gameId++) {
             if (!this.games.has(gameId)) {
-                const game = new Game(gameId);
-                return game;
+                return new Game(gameId, 10, 10, 5);
             }
         }
         return null; // No available game IDs
@@ -33,8 +32,13 @@ export default class GameSessionManager {
         } else {
             // Try to get existing game or create new one if it doesn't exist
             game = this.games.get(requestedGameId);
+            // if (!game) {
+                // TODO: CHANGE
+                // ws.close();
+                // return null;
+            // }
             if (!game) {
-                game = new Game(requestedGameId);
+                game = new Game(requestedGameId, 10, 10, 5);
                 this.games.set(requestedGameId, game);
             }
         }

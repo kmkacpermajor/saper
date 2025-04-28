@@ -8,10 +8,10 @@ export default class Tile {
 
     countAdjacentMines(board, x, y) {
         let count = 0;
-        for (let dx = -1; dx <= 1; dx++) {
-            for (let dy = -1; dy <= 1; dy++) {
-                let nx = x + dx, ny = y + dy;
-                if (nx >= 0 && ny >= 0 && nx < board.length && ny < board[0].length && board[nx][ny].isMine) {
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                let ny = y + dy, nx = x + dx;
+                if (ny >= 0 && nx >= 0 && ny < board.length && nx < board[0].length && board[ny][nx].isMine) {
                     count++;
                 }
             }

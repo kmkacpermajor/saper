@@ -39,6 +39,8 @@ export default class MessageReceiver {
 
         this.currentGame = this.gameSessionManager.getGame(requestedGameId, this.ws);
         
+        if (!this.currentGame) return;
+
         this.currentGame.messageSender.addClient(this.ws);
 
         this.currentGame.messageSender.sendConfirmation(this.ws, this.currentGame.gameId);
@@ -51,11 +53,7 @@ export default class MessageReceiver {
         const x = data.getUint16(1);
         const y = data.getUint16(3);
         console.log(`Server wants to reveal tile ${x}, ${y}`);
-        let tilesToReveal = this.currentGame.tilesToReveal(x, y);
-        this.currentGame.messageSender.sendRevealTiles(tilesToReveal);
-        if (this.currentGame.getGameEnded() === 0x02){
-            this.currentGame.messageSender.sendGameOver(false);
-        }
+        this.currentGame.revealTiles(x, y);
     }
 
     handleResetGame(data){
@@ -68,14 +66,10 @@ export default class MessageReceiver {
         const flag = data.getUint8(5);
         if (!flag){
             console.log(`Server wants to flag tile ${x}, ${y}`);
-            // this.currentGame.board.board[y][x].isFlagged = true;
             this.currentGame.flagTile(x, y);
-            this.currentGame.messageSender.sendRevealTiles([{x, y, type: 9}]);
         }else{
             console.log(`Server wants to unflag tile ${x}, ${y}`);
-            // this.currentGame.board.board[y][x].isFlagged = false;
             this.currentGame.unflagTile(x, y);
-            this.currentGame.messageSender.sendRevealTiles([{x, y, type: -1}]);
         }
     }
 }
