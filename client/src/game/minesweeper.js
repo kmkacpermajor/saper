@@ -14,8 +14,8 @@ const waitForOpenSocket = async(socket) => {
   };
 
 export default class Minesweeper {
-    constructor(gameId, rows = 10, cols = 10, tileSize = 40, mineCount = 5){
-        this.gameId = gameId;
+    constructor(gameId, eventHandler, rows = 10, cols = 10, tileSize = 40, mineCount = 5){
+        this._gameId = gameId;
         this.rows = rows;
         this.cols = cols;
         this.mineCount = mineCount;
@@ -30,6 +30,26 @@ export default class Minesweeper {
             numbers: []
         };
         this.socket = new WebSocket("ws://localhost:8080");
+        this.eventHandler = eventHandler
+    }
+
+    get gameId() {
+        return this._gameId
+    }
+
+    // Safe state updates with events
+    set gameId(value) {
+        this._gameId = value
+        this.emitEvent('GAME_ID_UPDATE', value)
+    }
+
+    emitEvent(type, payload) {
+        if (this.eventHandler) {
+            // Use setTimeout to break potential synchronous recursion
+            setTimeout(() => {
+                this.eventHandler({ type, payload })
+            }, 0)
+        }
     }
 
     revealTile(x, y, type) {
@@ -47,12 +67,12 @@ export default class Minesweeper {
     }
 
     async init() {
+        if (this.initialized) return;
         // Tworzenie aplikacji PixiJS
         this.app = new Application();
         await this.app.init({ 
             width: this.cols * this.tileSize, height: this.rows * this.tileSize, backgroundColor: 0x1099bb 
         });
-        document.body.appendChild(this.app.canvas);
         this.app.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
         this.app.stage.addChild(this.container);
@@ -64,7 +84,7 @@ export default class Minesweeper {
 
         this.socket.binaryType = 'arraybuffer';
 
-        this.connect(0x01);
+        this.connect(this.gameId);
 
         this.socket.onmessage = (event) => {
             const data = new DataView(event.data);
@@ -115,11 +135,11 @@ export default class Minesweeper {
 
     async loadTextures() {
         for (let i = 0; i < 9; i++) {
-            this.textures.numbers[i] = await Assets.load(`${i}.png`);
+            this.textures.numbers[i] = await Assets.load(`src/assets/${i}.png`);
         }
-        this.textures.default = await Assets.load('revealed.png');
-        this.textures.mine = await Assets.load('mine.png');
-        this.textures.flag = await Assets.load('flag.png');
+        this.textures.default = await Assets.load('src/assets/revealed.png');
+        this.textures.mine = await Assets.load('src/assets/mine.png');
+        this.textures.flag = await Assets.load('src/assets/flag.png');
     }
 
     sendShowTile(tile) {
@@ -182,4 +202,22 @@ export default class Minesweeper {
             }
         }
     }
+
+    handleMessage(message) {
+    // Handle messages from Vue
+        console.log('Message from UI:', message)
+    }
+    
+    sendToUI(data) {
+        if (this.onMessageCallback) {
+            this.onMessageCallback(data)
+        }
+    }
+
+    cleanup() {
+        // Clean up all game resources
+        this.app.ticker.stop()
+        this.app.stage.destroy({ children: true })
+        this.initialized = false
+      }
 }

@@ -27,7 +27,7 @@ export default class GameSessionManager {
                 return null;
             }
 
-            this.games.set(gameId, game);
+            this.games.set(game.gameId, game);
 
         } else {
             // Try to get existing game or create new one if it doesn't exist
