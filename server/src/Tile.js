@@ -6,7 +6,7 @@ export default class Tile {
         this.adjacentMines = 0;
     }
 
-    countAdjacentMines(board, x, y) {
+    countAdjacentMines(board, y, x) {
         let count = 0;
         for (let dy = -1; dy <= 1; dy++) {
             for (let dx = -1; dx <= 1; dx++) {

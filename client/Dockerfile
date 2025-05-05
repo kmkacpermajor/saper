@@ -20,7 +20,5 @@ ENV NODE_ENV=development
 # Expose Vite port
 EXPOSE 5173
 
-RUN npm i @vitejs/plugin-vue
-
 # Start development server
 CMD ["yarn", "dev"]

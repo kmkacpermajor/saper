@@ -14,12 +14,12 @@ export default class Board {
         this.createBoard();
     }
 
-    flagTile(x, y){
+    flagTile(y, x){
         this.board[y][x].isFlagged = true;
         this.numOfFlaggedTiles++;
     }
 
-    unflagTile(x, y){
+    unflagTile(y, x){
         this.board[y][x].isFlagged = false;
         this.numOfFlaggedTiles--;
     }
@@ -33,16 +33,16 @@ export default class Board {
     }
 
     createBoard() {
-        this.board = Array.from({ length: this.rows }, () => 
-            Array.from({ length: this.cols }, () => new Tile()));
+        this.board = Array.from({ length: this.cols }, () => 
+            Array.from({ length: this.rows }, () => new Tile()));
 
         let minesPlaced = 0;
         while (minesPlaced < this.numBombs) {
-            let y = Math.floor(Math.random() * this.rows);
-            let x = Math.floor(Math.random() * this.cols);
+            let y = Math.floor(Math.random() * this.cols);
+            let x = Math.floor(Math.random() * this.rows);
             if (!this.board[y][x].isMine) {
                 this.board[y][x].isMine = true;
-                this.bombCoords.push({x: x, y: y});
+                this.bombCoords.push({y: y, x: x});
                 minesPlaced++;
             }
         }
@@ -50,22 +50,22 @@ export default class Board {
         for (let y = 0; y < this.cols; y++) {
             for (let x = 0; x < this.rows; x++) {
                 if (!this.board[y][x].isMine) {
-                    this.board[y][x].adjacentMines = this.board[y][x].countAdjacentMines(this.board, x, y);
+                    this.board[y][x].adjacentMines = this.board[y][x].countAdjacentMines(this.board, y, x);
                 }
             }
         }
     }
 
-    tilesToReveal(x, y) {
+    tilesToReveal(y, x) {
         if (this.gameEnded || this.board[y][x].isRevealed) return [];
     
         if (this.board[y][x].isMine) {
             this.board[y][x].isRevealed = true;
-            return [{x: x, y: y, type: this.board[y][x].getType()}];
+            return [{y: y, x: x, type: this.board[y][x].getType()}];
         }
         
         const tilesToReveal = [];
-        const queue = [{x: x, y: y}];
+        const queue = [{y: y, x: x}];
         
         while (queue.length > 0) {
             const tileCoords = queue.shift();
@@ -81,14 +81,14 @@ export default class Board {
             
             // Reveal the tile (access as board[cy][cx])
             this.board[cy][cx].isRevealed = true;
-            tilesToReveal.push({x: cx, y: cy, type: this.board[cy][cx].getType()});
+            tilesToReveal.push({y: cy, x: cx, type: this.board[cy][cx].getType()});
             
             // If it's a zero, add adjacent tiles to queue
             if (this.board[cy][cx].adjacentMines === 0) {
-                for (let dx = -1; dx <= 1; dx++) {
-                    for (let dy = -1; dy <= 1; dy++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    for (let dx = -1; dx <= 1; dx++) {
                         if (dx !== 0 || dy !== 0) {
-                            queue.push({x: cx + dx, y: cy + dy});
+                            queue.push({y: cy + dy, x: cx + dx});
                         }
                     }
                 }
@@ -96,6 +96,8 @@ export default class Board {
         }
 
         this.numOfUnrevealedTiles -= tilesToReveal.length;
+
+        console.log(tilesToReveal); 
         
         return tilesToReveal;
     }
@@ -106,7 +108,7 @@ export default class Board {
             for (let x = 0; x < this.board[y].length; x++) {
                 const tile = this.board[y][x];
                 if (tile.isRevealed || tile.isFlagged) {
-                    shownTiles.push({x: x, y: y, type: tile.getType()});
+                    shownTiles.push({y: y, x: x, type: tile.getType()});
                 }
             }
         }

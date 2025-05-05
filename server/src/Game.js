@@ -4,27 +4,31 @@ import MessageSender from './MessageSender.js';
 export default class Game {
     constructor(gameId, rows, cols, numBombs) {
         this.gameId = gameId;
-        this.board = new Board(10, 10, 5);
+        this.rows = rows;
+        this.cols = cols;
+        this.numBombs = numBombs;
         this.messageSender = new MessageSender();
-        this.firstMove = true;
     }
 
     resetGame() {
-        this.board = new Board(rows, cols, numBombs);
+        this.board = null;
+        this.messageSender.sendReset();
     }
 
-    revealTiles(x,y){
-        if (this.firstMove) {
+    revealTiles(y, x){
+        if (!this.board) {
+            console.log("firs move");
+            this.board = new Board(this.rows, this.cols, this.numBombs); // TODO: we can pass first move and generate board around that...
             let numTries = 0;
-            while (numTries < 5){
+            while (numTries < 20){
+                console.log("type: "+this.board.board[y][x].getType());
                 if (this.board.board[y][x].getType() === 0) break;
-                this.board = new Board(10, 10, 5);
+                this.board = new Board(this.rows, this.cols, this.numBombs);
                 numTries++;
             }
-            this.firstMove = false;
         }
 
-        const tilesToReveal = this.board.tilesToReveal(x,y);
+        const tilesToReveal = this.board.tilesToReveal(y, x);
 
         this.messageSender.sendRevealTiles(tilesToReveal);
 
@@ -39,10 +43,10 @@ export default class Game {
         }
     }
 
-    flagTile(x, y){
-        this.board.flagTile(x, y);
+    flagTile(y, x){
+        this.board.flagTile(y, x);
         this.board.board[y][x].isFlagged = true;
-        this.messageSender.sendRevealTiles([{x, y, type: 9}]);
+        this.messageSender.sendRevealTiles([{y: y, x: x, type: 9}]);
         
         if (this.board.numOfFlaggedTiles === this.board.numBombs){
             this.gameEnded = true;
@@ -55,9 +59,9 @@ export default class Game {
         }
     }
 
-    unflagTile(x, y){
-        this.board.unflagTile(x, y);
-        this.messageSender.sendRevealTiles([{x, y, type: -1}]);
+    unflagTile(y, x){
+        this.board.unflagTile(y, x);
+        this.messageSender.sendRevealTiles([{y: y, x: x, type: -1}]);
     }
 
     getGameEnded() {

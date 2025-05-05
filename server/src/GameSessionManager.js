@@ -7,40 +7,24 @@ export default class GameSessionManager {
         this.games = new Map(); // gameId -> Game instance
     }
 
-    createNewGame() {
+    createNewGame(rows, cols, numBombs, ws) {
         // Find an available gameId
         for (let gameId = 0; gameId <= MAX_GAME_ID; gameId++) {
             if (!this.games.has(gameId)) {
-                return new Game(gameId, 10, 10, 5);
+                const game = new Game(gameId, rows, cols, numBombs);
+                this.games.set(gameId, game);
+                return game;
             }
         }
+        ws.close();
         return null; // No available game IDs
     }
 
     getGame(requestedGameId, ws){
-        let game = null;
-        if (requestedGameId === 0xFF) {
-            // Request to create a new game
-            game = this.createNewGame();
-            if (!game) {
-                ws.close();
-                return null;
-            }
-
-            this.games.set(game.gameId, game);
-
-        } else {
-            // Try to get existing game or create new one if it doesn't exist
-            game = this.games.get(requestedGameId);
-            // if (!game) {
-                // TODO: CHANGE
-                // ws.close();
-                // return null;
-            // }
-            if (!game) {
-                game = new Game(requestedGameId, 10, 10, 5);
-                this.games.set(requestedGameId, game);
-            }
+        let game = this.games.get(requestedGameId);
+        if (!game) {
+            ws.close();
+            return null;
         }
         return game;
     }

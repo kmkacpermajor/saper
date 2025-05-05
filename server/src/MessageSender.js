@@ -21,26 +21,38 @@ export default class MessageSender {
         });
     }
 
-    sendConfirmation(ws, gameId) {
+    sendConfirmation(ws, game) {
         // Send confirmation with gameId
-        const buffer = new ArrayBuffer(2);
+        const buffer = new ArrayBuffer(5);
         const view = new DataView(buffer);
         view.setUint8(0, 0x00); // connect response
-        view.setUint8(1, gameId);
+        view.setUint8(1, game.gameId);
+        view.setUint8(2, game.rows);
+        view.setUint8(3, game.cols);
+        view.setUint8(4, game.numBombs);
         ws.send(buffer, { binary: true });
     }
 
+    sendReset(){
+        console.log("Server wants to reset");
+        const buffer = new ArrayBuffer(1);
+        const view = new DataView(buffer);
+        view.setUint8(0, 0x04);
+        this.broadcast(buffer);
+    }
+
     sendRevealTiles(tiles, client=null) {
-        const buffer = new ArrayBuffer(1 + 1 + tiles.length * 5);
+        const buffer = new ArrayBuffer(1 + 2 + tiles.length * 5);
         const view = new DataView(buffer);
         
+        console.log(tiles.length);
         view.setUint8(0, 0x01);
-        view.setUint8(1, tiles.length);
+        view.setUint16(1, tiles.length);
         
         tiles.forEach((tile, index) => {
-            let offset = 2 + index * 5;
-            view.setUint16(offset, tile.x);
-            view.setUint16(offset + 2, tile.y);
+            let offset = 3 + index * 5;
+            view.setUint16(offset, tile.y);
+            view.setUint16(offset + 2, tile.x);
             view.setInt8(offset + 4, tile.type);
         });
         

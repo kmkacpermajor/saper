@@ -14,12 +14,9 @@ const waitForOpenSocket = async(socket) => {
   };
 
 export default class Minesweeper {
-    constructor(gameId, eventHandler, rows = 10, cols = 10, tileSize = 40, mineCount = 5){
+    constructor(gameId, eventHandler){
         this._gameId = gameId;
-        this.rows = rows;
-        this.cols = cols;
-        this.mineCount = mineCount;
-        this.tileSize = tileSize;
+        this.tileSize = 40;
         this.board = [];
         this.container = new Container();
         this.textures = {
@@ -29,18 +26,37 @@ export default class Minesweeper {
             flag: null,
             numbers: []
         };
-        this.socket = new WebSocket("ws://localhost:8080");
-        this.eventHandler = eventHandler
+        this.socket = new WebSocket("ws://192.168.0.178:8080");
+        this.eventHandler = eventHandler;
+        this._gameState = 0; // -1 lost 0 inprogress 1 won
+        this._numBombs = 0;
     }
 
     get gameId() {
         return this._gameId
     }
 
-    // Safe state updates with events
     set gameId(value) {
         this._gameId = value
         this.emitEvent('GAME_ID_UPDATE', value)
+    }
+
+    get gameState() {
+        return this._gameState
+    }
+
+    set gameState(value) {
+        this._gameState = value
+        this.emitEvent('GAME_STATE_UPDATE', value)
+    }
+
+    get numBombs() {
+        return this._numBombs
+    }
+
+    set numBombs(value) {
+        this._numBombs = value
+        this.emitEvent('NUM_BOMBS_UPDATE', value)
     }
 
     emitEvent(type, payload) {
@@ -52,40 +68,45 @@ export default class Minesweeper {
         }
     }
 
-    revealTile(x, y, type) {
-        console.log(`Show tile : ${x}, ${y}`)
-        this.board[x][y].type = type;
+    revealTile(y, x, type) {
+        console.log(`Show tile : ${y}, ${x}`)
+        this.board[y][x].type = type;
         this.renderBoard();
     }
 
-    connect(gameId) {
-        const buf = new ArrayBuffer(2);
+    connect(gameId, rows, cols, numBombs) {
+        const buf = new ArrayBuffer(5);
         const view = new DataView(buf);
         view.setUint8(0, 0x80);
         view.setUint8(1, gameId);
+        view.setUint8(2, rows);
+        view.setUint8(3, cols);
+        view.setUint8(4, numBombs);
         this.socket.send(buf);
     }
 
-    async init() {
+    async init(rows, cols, numBombs) {
         if (this.initialized) return;
+
         // Tworzenie aplikacji PixiJS
         this.app = new Application();
-        await this.app.init({ 
-            width: this.cols * this.tileSize, height: this.rows * this.tileSize, backgroundColor: 0x1099bb 
+        await this.app.init({  
+            width: 0, height: 0, 
+            backgroundColor: 0x1099bb 
         });
+        await this.loadTextures();
+
         this.app.canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
         this.app.stage.addChild(this.container);
 
         // Załaduj tekstury
-        await this.loadTextures();
-
         await waitForOpenSocket(this.socket);
 
         this.socket.binaryType = 'arraybuffer';
 
-        this.connect(this.gameId);
-
+        this.connect(this.gameId, rows, cols, numBombs);
+        
         this.socket.onmessage = (event) => {
             const data = new DataView(event.data);
             const messageType = data.getUint8(0);
@@ -93,21 +114,33 @@ export default class Minesweeper {
             
             switch(messageType) {
                 case 0x00: // connected
-                    const gameId = data.getUint8(1);
-                    this.gameId = gameId;
+                    this.gameId = data.getUint8(1);
+                    this.rows = data.getUint8(2);
+                    this.cols = data.getUint8(3);
+                    this.numBombs = data.getUint8(4);
+                    this.app.renderer.resize(
+                        this.cols*this.tileSize,
+                        this.rows*this.tileSize,
+                      );
                     this.loadBoard();
                     this.renderBoard();
                     break;
                 case 0x01: // revealTiles
-                    const tileCount = data.getUint8(1);
+                    const tileCount = data.getUint16(1);
                         console.log(`${tileCount}`);
                         for (let i = 0; i < tileCount; i++) {
-                        const offset = 2 + i * 5;
-                        const x = data.getUint16(offset);
-                        const y = data.getUint16(offset + 2);
+                        const offset = 3 + i * 5;
+                        const y = data.getUint16(offset);
+                        const x = data.getUint16(offset + 2);
                         const type = data.getInt8(offset + 4);
-                        console.log(`${x}, ${y}, ${type}`);
-                        this.revealTile(x,y, type);
+                        if (type === -1){
+                            this.numBombs++;
+                        }
+                        if (type === 9){
+                            this.numBombs--;
+                        }
+                        console.log(`${y}, ${x}, ${type}`);
+                        this.revealTile(y, x, type);
                     }
                     break;
                     
@@ -118,6 +151,10 @@ export default class Minesweeper {
                 case 0x03: // youWin
                     this.handleYouWin();
                     break;
+
+                case 0x04:
+                    this.handleReset();
+                    break;
                     
                 default:
                     console.error('Unknown message type:', messageType);
@@ -125,12 +162,17 @@ export default class Minesweeper {
         };
     }
 
+    handleReset(){
+        this.loadBoard();
+        this.gameState = 0;
+    }
+
     handleYouLost() {
-        alert("You lost!");
+        this.gameState = -1;
     }
 
     handleYouWin() {
-        alert("You won!");
+        this.gameState = 1;
     }
 
     async loadTextures() {
@@ -143,12 +185,12 @@ export default class Minesweeper {
     }
 
     sendShowTile(tile) {
-        if (this.board[tile.x][tile.y].type !== -1) return;
+        if (this.board[tile.y][tile.x].type !== -1) return;
         const buf = new ArrayBuffer(5);
         const view = new DataView(buf);
         view.setUint8(0, 0x81);
-        view.setUint16(1, tile.x);
-        view.setUint16(3, tile.y);
+        view.setUint16(1, tile.y);
+        view.setUint16(3, tile.x);
         this.socket.send(buf);
     }
     
@@ -160,9 +202,9 @@ export default class Minesweeper {
     }
 
     loadBoard() {
-        this.board = Array.from({ length: this.rows }, (_, x) => 
-            Array.from({ length: this.cols }, (_, y) => {
-                const tile = new Tile(x, y, this.tileSize, new Sprite(this.textures.default));
+        this.board = Array.from({ length: this.cols }, (_, y) => 
+            Array.from({ length: this.rows }, (_, x) => {
+                const tile = new Tile(y, x, this.tileSize, new Sprite(this.textures.default));
                 tile.sprite.on("pointerdown", (event) => {
                     if (event.button === 0) this.sendShowTile(tile);
                     if (event.button === 2) this.sendFlagTile(tile);
@@ -173,22 +215,29 @@ export default class Minesweeper {
         );
     }
 
+    sendReset(){
+        console.log("send reset");
+        const buf = new ArrayBuffer(1);
+        const view = new DataView(buf);
+        view.setUint8(0, 0x82);
+        this.socket.send(buf);
+    }
+
     sendFlagTile(tile) {
-        console.log(this.board[tile.x][tile.y].type);
-        if (this.board[tile.x][tile.y].type !== -1 && this.board[tile.x][tile.y].type !== 9) return;
+        if (this.board[tile.y][tile.x].type !== -1 && this.board[tile.y][tile.x].type !== 9) return;
         const buf = new ArrayBuffer(6);
         const view = new DataView(buf);
         view.setUint8(0, 0x83);
-        view.setUint16(1, tile.x);
-        view.setUint16(3, tile.y);
-        view.setUint8(5, this.board[tile.x][tile.y].type === 9);
+        view.setUint16(1, tile.y);
+        view.setUint16(3, tile.x);
+        view.setUint8(5, this.board[tile.y][tile.x].type === 9);
         this.socket.send(buf);
     }
 
     renderBoard() {
-        for (let x = 0; x < this.rows; x++) {
-            for (let y = 0; y < this.cols; y++) {
-                const tile = this.board[x][y];
+        for (let y = 0; y < this.cols; y++) {
+            for (let x = 0; x < this.rows; x++) {
+                const tile = this.board[y][x];
                 tile.sprite.texture = this.textures.default;
                 if (tile.type === -1){
                     tile.sprite.texture = this.textures.default;
@@ -208,12 +257,6 @@ export default class Minesweeper {
         console.log('Message from UI:', message)
     }
     
-    sendToUI(data) {
-        if (this.onMessageCallback) {
-            this.onMessageCallback(data)
-        }
-    }
-
     cleanup() {
         // Clean up all game resources
         this.app.ticker.stop()
