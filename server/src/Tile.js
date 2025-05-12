@@ -3,20 +3,7 @@ export default class Tile {
         this.isMine = false;
         this.isRevealed = false;
         this.isFlagged = false;
-        this.adjacentMines = 0;
-    }
-
-    countAdjacentMines(board, y, x) {
-        let count = 0;
-        for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-                let ny = y + dy, nx = x + dx;
-                if (ny >= 0 && nx >= 0 && ny < board.length && nx < board[0].length && board[ny][nx].isMine) {
-                    count++;
-                }
-            }
-        }
-        return count;
+        this.adjacentMines = -1;
     }
 
     getType() {

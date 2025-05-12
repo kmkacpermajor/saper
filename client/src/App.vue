@@ -12,8 +12,8 @@ const gameId = ref('');
 const currentGameId = ref('');
 const currentGameState = ref(0);
 const currentNumBombs = ref(0);
-const boardWidth = ref(10);
-const boardHeight = ref(10);
+const boardWidth = ref(15);
+const boardHeight = ref(15);
 const numBombs = ref(15);
 const maxBombs = computed(() => Math.floor(boardWidth.value * boardHeight.value * 0.35));
 
@@ -97,6 +97,8 @@ const handleReset = () => {
 
 function resetGameState() {
   currentGameId.value = ''
+  currentGameState.value = 0
+  currentNumBombs.value = 0
 }
 
 onBeforeUnmount(() => {
@@ -168,8 +170,12 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Canvas Container -->
-      <div ref="gameCanvasContainer" id="gameCanvasContainer" v-show="gameRunning" class="my-4 w-min justify-center">
+      <div v-show="gameRunning"
+        class="my-4 w-min justify-center border border-gray-400 bg-gray-100 rounded-lg shadow-md p-4">
+        <div ref="gameCanvasContainer" id="gameCanvasContainer" class="border-1 border-gray-400">
+        </div>
       </div>
+
 
       <!-- Game UI -->
       <div v-if="gameRunning" class="w-full">

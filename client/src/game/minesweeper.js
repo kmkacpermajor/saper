@@ -16,7 +16,7 @@ const waitForOpenSocket = async(socket) => {
 export default class Minesweeper {
     constructor(gameId, eventHandler){
         this._gameId = gameId;
-        this.tileSize = 40;
+        this.tileSize = 25;
         this.board = [];
         this.container = new Container();
         this.textures = {
@@ -26,10 +26,11 @@ export default class Minesweeper {
             flag: null,
             numbers: []
         };
-        this.socket = new WebSocket("ws://192.168.0.178:8080");
+        this.socket = new WebSocket("ws://192.168.1.6:8080");
         this.eventHandler = eventHandler;
         this._gameState = 0; // -1 lost 0 inprogress 1 won
         this._numBombs = 0;
+        this.initialNumBombs = 0;
     }
 
     get gameId() {
@@ -118,6 +119,7 @@ export default class Minesweeper {
                     this.rows = data.getUint8(2);
                     this.cols = data.getUint8(3);
                     this.numBombs = data.getUint8(4);
+                    this.initialNumBombs = this.numBombs;
                     this.app.renderer.resize(
                         this.cols*this.tileSize,
                         this.rows*this.tileSize,
@@ -165,6 +167,7 @@ export default class Minesweeper {
     handleReset(){
         this.loadBoard();
         this.gameState = 0;
+        this.numBombs = this.initialNumBombs;
     }
 
     handleYouLost() {

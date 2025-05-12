@@ -8,6 +8,7 @@ export default class Board {
         this.board = [];
         this.bombCoords = [];
         this.gameEnded = false;
+        this.gameWon = false;
         this.numOfUnrevealedTiles = rows*cols;
         this.numOfFlaggedTiles = 0;
 
@@ -32,14 +33,27 @@ export default class Board {
         return sum;
     }
 
+    countAdjacentMines(y, x) {
+        let count = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+                let ny = y + dy, nx = x + dx;
+                if (ny >= 0 && nx >= 0 && ny < this.cols && nx < this.rows && this.board[ny][nx].isMine) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
     createBoard() {
-        this.board = Array.from({ length: this.cols }, () => 
-            Array.from({ length: this.rows }, () => new Tile()));
+        this.board = Array.from({ length: this.rows }, () => 
+            Array.from({ length: this.cols }, () => new Tile()));
 
         let minesPlaced = 0;
         while (minesPlaced < this.numBombs) {
-            let y = Math.floor(Math.random() * this.cols);
-            let x = Math.floor(Math.random() * this.rows);
+            let y = Math.floor(Math.random() * this.rows);
+            let x = Math.floor(Math.random() * this.cols);
             if (!this.board[y][x].isMine) {
                 this.board[y][x].isMine = true;
                 this.bombCoords.push({y: y, x: x});
@@ -50,18 +64,23 @@ export default class Board {
         for (let y = 0; y < this.cols; y++) {
             for (let x = 0; x < this.rows; x++) {
                 if (!this.board[y][x].isMine) {
-                    this.board[y][x].adjacentMines = this.board[y][x].countAdjacentMines(this.board, y, x);
+                    this.board[y][x].adjacentMines = this.countAdjacentMines(y, x);
                 }
             }
         }
     }
 
     tilesToReveal(y, x) {
-        if (this.gameEnded || this.board[y][x].isRevealed) return [];
+        if (this.gameEnded || this.board[y][x].isRevealed) return;
     
         if (this.board[y][x].isMine) {
+            const tilesToReveal = [];
+            this.bombCoords.forEach((bombLocation) => {
+                this.board[bombLocation.y][bombLocation.x].isRevealed = true;
+                tilesToReveal.push({y: bombLocation.y, x: bombLocation.x, type: this.board[bombLocation.y][bombLocation.x].getType()});
+            });
             this.board[y][x].isRevealed = true;
-            return [{y: y, x: x, type: this.board[y][x].getType()}];
+            return tilesToReveal;
         }
         
         const tilesToReveal = [];

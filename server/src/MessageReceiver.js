@@ -55,13 +55,14 @@ export default class MessageReceiver {
         if(this.currentGame.board) {
             const shownTiles = this.currentGame.board.getShownTiles();
             if(shownTiles) this.currentGame.messageSender.sendRevealTiles(shownTiles, this.ws);
+            if(this.currentGame.gameEnded) this.currentGame.messageSender.sendGameOver(this.currentGame.gameWon);
         }
     }
 
     handleRevealTile(data){
         const y = data.getUint16(1);
         const x = data.getUint16(3);
-        console.log(`Server wants to reveal tile ${y}, ${x}`);
+        console.log(`Client wants to reveal tile ${y}, ${x}`);
         this.currentGame.revealTiles(y, x);
     }
 
@@ -75,10 +76,10 @@ export default class MessageReceiver {
         const x = data.getUint16(3);
         const flag = data.getUint8(5);
         if (!flag){
-            console.log(`Server wants to flag tile ${x}, ${y}`);
+            console.log(`Client wants to flag tile ${x}, ${y}`);
             this.currentGame.flagTile(y, x);
         }else{
-            console.log(`Server wants to unflag tile ${x}, ${y}`);
+            console.log(`Client wants to unflag tile ${x}, ${y}`);
             this.currentGame.unflagTile(y, x);
         }
     }

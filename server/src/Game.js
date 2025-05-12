@@ -10,9 +10,31 @@ export default class Game {
         this.messageSender = new MessageSender();
     }
 
+    get gameEnded() {
+        return this.board.gameEnded
+    }
+
+    set gameEnded(value) {
+        this.board.gameEnded = value
+    }
+
+    get gameWon() {
+        return this.board.gameWon
+    }
+
+    set gameWon(value) {
+        this.board.gameWon = value
+    }
+
     resetGame() {
         this.board = null;
         this.messageSender.sendReset();
+    }
+
+    gameOver(isWin) {
+        this.gameEnded = true;
+        this.gameWon = isWin;
+        this.messageSender.sendGameOver(this.gameWon);
     }
 
     revealTiles(y, x){
@@ -30,16 +52,16 @@ export default class Game {
 
         const tilesToReveal = this.board.tilesToReveal(y, x);
 
+        if (!tilesToReveal) return;
+
         this.messageSender.sendRevealTiles(tilesToReveal);
 
-        if (tilesToReveal[0].type === 10){
-            this.gameEnded = true;
-            this.messageSender.sendGameOver(false);
+        if (tilesToReveal.some(tile => tile.type === 10)){
+            this.gameOver(false);
         }
 
         if ((this.board.numBombs - this.board.numOfFlaggedBombs()) === (this.board.numOfUnrevealedTiles - this.board.numOfFlaggedTiles)){
-            this.gameEnded = true;
-            this.messageSender.sendGameOver(true);
+            this.gameOver(true);
         }
     }
 
@@ -49,22 +71,16 @@ export default class Game {
         this.messageSender.sendRevealTiles([{y: y, x: x, type: 9}]);
         
         if (this.board.numOfFlaggedTiles === this.board.numBombs){
-            this.gameEnded = true;
-            this.messageSender.sendGameOver(this.board.numOfFlaggedBombs() === this.board.numBombs);
+            this.gameOver(this.board.numOfFlaggedBombs() === this.board.numBombs);
         }
 
         if ((this.board.numBombs - this.board.numOfFlaggedBombs()) === (this.board.numOfUnrevealedTiles - this.board.numOfFlaggedTiles)){
-            this.gameEnded = true;
-            this.messageSender.sendGameOver(true);
+            this.gameOver(true);
         }
     }
 
     unflagTile(y, x){
         this.board.unflagTile(y, x);
         this.messageSender.sendRevealTiles([{y: y, x: x, type: -1}]);
-    }
-
-    getGameEnded() {
-        return this.board.gameEnded;
     }
 };
