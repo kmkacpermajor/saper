@@ -2,7 +2,7 @@ import { WebSocketServer } from 'ws';
 import MessageReceiver from './MessageReceiver.js';
 import GameSessionManager from './GameSessionManager.js';
 
-const wss = new WebSocketServer({ port: 8080 });
+const wss = new WebSocketServer({ host: '0.0.0.0', port: 8085 });
 
 const gameSessionManager = new GameSessionManager();
 

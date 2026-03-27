@@ -26,7 +26,7 @@ export default class Minesweeper {
             flag: null,
             numbers: []
         };
-        this.socket = new WebSocket("ws://192.168.1.6:8080");
+        this.socket = new WebSocket("ws://localhost:8085");
         this.eventHandler = eventHandler;
         this._gameState = 0; // -1 lost 0 inprogress 1 won
         this._numBombs = 0;
@@ -71,6 +71,12 @@ export default class Minesweeper {
 
     revealTile(y, x, type) {
         console.log(`Show tile : ${y}, ${x}`)
+        if (type === -1){
+            this.numBombs++;
+        }
+        if (type === 9){
+            this.numBombs--;
+        }
         this.board[y][x].type = type;
         this.renderBoard();
     }
@@ -135,12 +141,6 @@ export default class Minesweeper {
                         const y = data.getUint16(offset);
                         const x = data.getUint16(offset + 2);
                         const type = data.getInt8(offset + 4);
-                        if (type === -1){
-                            this.numBombs++;
-                        }
-                        if (type === 9){
-                            this.numBombs--;
-                        }
                         console.log(`${y}, ${x}, ${type}`);
                         this.revealTile(y, x, type);
                     }
@@ -180,11 +180,11 @@ export default class Minesweeper {
 
     async loadTextures() {
         for (let i = 0; i < 9; i++) {
-            this.textures.numbers[i] = await Assets.load(`src/assets/${i}.png`);
+            this.textures.numbers[i] = await Assets.load(new URL(`/src/assets/${i}.png`, import.meta.url).href);
         }
-        this.textures.default = await Assets.load('src/assets/revealed.png');
-        this.textures.mine = await Assets.load('src/assets/mine.png');
-        this.textures.flag = await Assets.load('src/assets/flag.png');
+        this.textures.default = await Assets.load(new URL(`/src/assets/revealed.png`, import.meta.url).href);
+        this.textures.mine = await Assets.load(new URL(`/src/assets/mine.png`, import.meta.url).href);
+        this.textures.flag = await Assets.load(new URL(`/src/assets/flag.png`, import.meta.url).href);
     }
 
     sendShowTile(tile) {

@@ -37,7 +37,7 @@ const handleConnect = async () => {
       throw new Error('Please enter a Game ID');
     }
 
-    if (numBombs > maxBombs) {
+    if (numBombs.value > maxBombs.value) {
       throw new Error('Too much');
     }
 
@@ -95,7 +95,7 @@ const handleReset = () => {
   }
 }
 
-function resetGameState() {
+const resetGameState = () => {
   currentGameId.value = ''
   currentGameState.value = 0
   currentNumBombs.value = 0
