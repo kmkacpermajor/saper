@@ -1,0 +1,93 @@
+syntax = "proto3";
+
+package saper;
+
+enum GameState {
+  GAME_STATE_IN_PROGRESS = 0;
+  GAME_STATE_WON = 1;
+  GAME_STATE_LOST = 2;
+}
+
+enum TileType {
+  TILE_TYPE_HIDDEN = 0;
+  TILE_TYPE_FLAGGED = 1;
+  TILE_TYPE_MINE = 2;
+  TILE_TYPE_EMPTY = 3;
+  TILE_TYPE_ONE = 4;
+  TILE_TYPE_TWO = 5;
+  TILE_TYPE_THREE = 6;
+  TILE_TYPE_FOUR = 7;
+  TILE_TYPE_FIVE = 8;
+  TILE_TYPE_SIX = 9;
+  TILE_TYPE_SEVEN = 10;
+  TILE_TYPE_EIGHT = 11;
+}
+
+message ConnectRequest {
+  uint32 requested_game_id = 1;
+  uint32 rows = 2;
+  uint32 cols = 3;
+  uint32 num_bombs = 4;
+}
+
+message RevealTileRequest {
+  uint32 y = 1;
+  uint32 x = 2;
+}
+
+message FlagTileRequest {
+  uint32 y = 1;
+  uint32 x = 2;
+  bool unflag = 3;
+}
+
+message ResetRequest {}
+
+message ClientMessage {
+  uint32 contract_version = 1;
+  oneof payload {
+    ConnectRequest connect = 2;
+    RevealTileRequest reveal_tile = 3;
+    FlagTileRequest flag_tile = 4;
+    ResetRequest reset = 5;
+  }
+}
+
+message TileUpdate {
+  uint32 y = 1;
+  uint32 x = 2;
+  TileType type = 3;
+}
+
+message ConnectResponse {
+  uint32 game_id = 1;
+  uint32 rows = 2;
+  uint32 cols = 3;
+  uint32 num_bombs = 4;
+}
+
+message RevealTilesResponse {
+  repeated TileUpdate tiles = 1;
+}
+
+message GameOverResponse {
+  GameState state = 1;
+}
+
+message ResetResponse {}
+
+message ErrorResponse {
+  string code = 1;
+  string message = 2;
+}
+
+message ServerMessage {
+  uint32 contract_version = 1;
+  oneof payload {
+    ConnectResponse connect = 2;
+    RevealTilesResponse reveal_tiles = 3;
+    GameOverResponse game_over = 4;
+    ResetResponse reset = 5;
+    ErrorResponse error = 6;
+  }
+}

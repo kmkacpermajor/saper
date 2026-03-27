@@ -1,0 +1,21 @@
+{
+  "name": "@saper/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "generate": "protoc --proto_path proto --ts_out src/generated proto/game.proto",
+    "check:generated": "pnpm run generate",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@protobuf-ts/runtime": "^2.11.1"
+  },
+  "devDependencies": {
+    "@protobuf-ts/plugin": "^2.11.1",
+    "@protobuf-ts/protoc": "^2.11.1",
+    "typescript": "^5.8.2"
+  }
+}
