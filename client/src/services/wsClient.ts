@@ -29,6 +29,17 @@ export type TransportClient = {
   sendReset(): void;
 };
 
+const DEV_WS_URL = "ws://localhost:8085";
+
+const resolveWebSocketUrl = (): string => {
+  if (import.meta.env.DEV) {
+    return DEV_WS_URL;
+  }
+
+  const buildTimeWsUrl = import.meta.env.VITE_WS_URL?.trim();
+  return buildTimeWsUrl || DEV_WS_URL;
+};
+
 const waitForOpenSocket = async (socket: WebSocket): Promise<void> => {
   await new Promise<void>((resolve) => {
     if (socket.readyState !== socket.OPEN) {
@@ -50,7 +61,7 @@ class WsClient implements TransportClient {
     const resolvedGameId =
       params.connectionType === "join" ? Number(params.gameId) : NEW_GAME_ID;
 
-    this.socket = new WebSocket("ws://localhost:8085");
+    this.socket = new WebSocket(resolveWebSocketUrl());
     this.onServerMessage = params.onServerMessage;
     await waitForOpenSocket(this.socket);
 
