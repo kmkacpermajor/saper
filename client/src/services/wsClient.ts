@@ -4,7 +4,7 @@ import {
   type TileCoordinates,
   type ServerMessage
 } from "@saper/contracts";
-import log from "loglevel";
+import log from "@/services/logger";
 import {
   createConnectPayload,
   createFlagTilePayload,

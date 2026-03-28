@@ -1,5 +1,5 @@
 import { GameState, NEW_GAME_ID, TileType, type ServerMessage } from "@saper/contracts";
-import log from "loglevel";
+import log from "@/services/logger";
 import type { GameEvent } from "@/game/gameEvents";
 import GameController from "@/game/gameController";
 import type { TransportClient } from "@/services/wsClient";

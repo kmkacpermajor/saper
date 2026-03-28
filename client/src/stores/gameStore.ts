@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { GameState } from "@saper/contracts";
 import { GAME_EVENT_TYPE, type GameEvent as GameUpdateEvent } from "@/game/gameEvents";
 import GameSession from "@/game/gameSession";
+import log from "@/services/logger";
 import { wsClient } from "@/services/wsClient";
 
 export const useGameStore = defineStore("game", () => {
@@ -106,7 +107,7 @@ export const useGameStore = defineStore("game", () => {
 
       const message = err instanceof Error ? err.message : "Unknown error";
       error.value = `Connection failed: ${message}`;
-      console.error("Game connection error:", err);
+      log.error("[client] Game connection error:", err);
     } finally {
       connecting.value = false;
     }

@@ -1,48 +1,11 @@
 import { Application } from "pixi.js";
 import { GameState, TileType, type TileCoordinates } from "@saper/contracts";
-import log from "loglevel";
+import log, { clientLogLevel } from "@/services/logger";
 import BoardRenderer from "./boardRenderer";
 import { GAME_EVENT_TYPE, type GameEvent } from "./gameEvents";
 import type { TransportClient } from "@/services/wsClient";
 
-type LogLevel = "debug" | "info" | "warn" | "error" | "silent";
-
 type EventHandler = (event: GameEvent) => void;
-
-const parseLogLevel = (value: string | undefined): LogLevel => {
-  switch ((value ?? "").toLowerCase()) {
-    case "debug":
-    case "info":
-    case "warn":
-    case "error":
-    case "silent":
-      return value!.toLowerCase() as LogLevel;
-    default:
-      return "debug";
-  }
-};
-
-const currentLogLevel = parseLogLevel(import.meta.env.VITE_LOG_LEVEL);
-
-log.setLevel(currentLogLevel);
-
-const logInfo = (message: string, data?: unknown): void => {
-  if (data === undefined) {
-    log.info(`[client] ${message}`);
-    return;
-  }
-
-  log.info(`[client] ${message}`, data);
-};
-
-const logDebug = (message: string, data?: unknown): void => {
-  if (data === undefined) {
-    log.debug(`[client] ${message}`);
-    return;
-  }
-
-  log.debug(`[client] ${message}`, data);
-};
 
 export default class GameController {
   private readonly tileSize = 25;
@@ -77,7 +40,7 @@ export default class GameController {
     this.cols = 0;
     this.initialized = false;
 
-    logInfo(`Log level: ${currentLogLevel}`);
+    log.info(`[client] Log level: ${clientLogLevel}`);
   }
 
   get gameId(): number {
@@ -207,14 +170,14 @@ export default class GameController {
     if (!bothPressedBefore && bothPressedNow && this.gestureTile && !this.chordArmedForGesture) {
       this.applyChordPreview(this.gestureTile);
       this.chordArmedForGesture = true;
-      logDebug("Combo armed on buttons transition", {
+      log.debug("[client] Combo armed on buttons transition", {
         tile: this.gestureTile,
         previousMask,
         currentMask
       });
     }
 
-    logDebug("Canvas mousedown", {
+    log.debug("[client] Canvas mousedown", {
       tile: pointerTile,
       button: event.button,
       previousMask,
@@ -233,7 +196,7 @@ export default class GameController {
       this.clearChordPreview();
 
       if (this.chordArmedForGesture && this.gestureTile && !this.chordTriggeredForGesture) {
-        logDebug("Combo reveal triggered on release", {
+        log.debug("[client] Combo reveal triggered on release", {
           tile: this.gestureTile,
           previousMask,
           currentMask
@@ -270,17 +233,17 @@ export default class GameController {
     ) {
       const tileType = this.boardState[pointerTile.y]?.[pointerTile.x];
       if (isLeftRelease && tileType === TileType.HIDDEN) {
-        logDebug("Single reveal triggered", { tile: pointerTile });
+        log.debug("[client] Single reveal triggered", { tile: pointerTile });
         this.transportClient.revealTiles([pointerTile]);
       }
 
       if (isRightRelease && (tileType === TileType.HIDDEN || tileType === TileType.FLAGGED)) {
-        logDebug("Flag toggle triggered", { tile: pointerTile, unflag: tileType === TileType.FLAGGED });
+        log.debug("[client] Flag toggle triggered", { tile: pointerTile, unflag: tileType === TileType.FLAGGED });
         this.transportClient.flagTile(pointerTile.y, pointerTile.x, tileType === TileType.FLAGGED);
       }
     }
 
-    logDebug("Window mouseup", {
+    log.debug("[client] Window mouseup", {
       tile: pointerTile,
       button: event.button,
       previousMask,
@@ -308,7 +271,7 @@ export default class GameController {
 
     const flaggedNeighbors = this.countFlaggedNeighbors(centerTile.y, centerTile.x);
     if (flaggedNeighbors !== adjacentMines) {
-      logDebug("Chord skipped due to flag mismatch", {
+      log.debug("[client] Chord skipped due to flag mismatch", {
         tile: centerTile,
         flaggedNeighbors,
         adjacentMines
@@ -318,7 +281,7 @@ export default class GameController {
 
     const hiddenNeighbors = this.collectHiddenNeighbors(centerTile.y, centerTile.x);
     if (hiddenNeighbors.length > 0) {
-      logDebug("Chord reveal triggered", {
+      log.debug("[client] Chord reveal triggered", {
         tile: centerTile,
         hiddenNeighborsCount: hiddenNeighbors.length
       });
@@ -326,7 +289,7 @@ export default class GameController {
       return;
     }
 
-    logDebug("Chord had no hidden neighbors", { tile: centerTile });
+    log.debug("[client] Chord had no hidden neighbors", { tile: centerTile });
   }
 
   private applyChordPreview(centerTile: TileCoordinates): void {
@@ -344,7 +307,7 @@ export default class GameController {
 
     this.chordPreviewTiles = hiddenNeighbors;
     if (hiddenNeighbors.length > 0) {
-      logDebug("Chord preview applied", {
+      log.debug("[client] Chord preview applied", {
         tile: centerTile,
         previewTiles: hiddenNeighbors.length
       });
@@ -365,7 +328,7 @@ export default class GameController {
       this.boardRenderer.renderTile(tile.y, tile.x, currentType);
     }
 
-    logDebug("Chord preview cleared", { previewTiles: this.chordPreviewTiles.length });
+    log.debug("[client] Chord preview cleared", { previewTiles: this.chordPreviewTiles.length });
     this.chordPreviewTiles = [];
   }
 
@@ -395,7 +358,7 @@ export default class GameController {
 
   private resetPointerState(): void {
     this.clearChordPreview();
-    logDebug("Resetting gesture state", {
+    log.debug("[client] Resetting gesture state", {
       mouseButtonsMask: this.mouseButtonsMask,
       gestureTile: this.gestureTile
     });
@@ -478,7 +441,7 @@ export default class GameController {
   }
 
   cleanup(): void {
-    logInfo("Cleaning up game instance.");
+    log.info("[client] Cleaning up game instance.");
     this.app.canvas.removeEventListener("mousedown", this.handleCanvasMouseDown);
     window.removeEventListener("mouseup", this.handleWindowMouseUp);
     this.app.ticker.stop();

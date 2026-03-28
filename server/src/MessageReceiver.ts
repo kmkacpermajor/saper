@@ -74,7 +74,7 @@ export default class MessageReceiver {
     switch (decodedMessage.payload.oneofKind) {
       case "connect": {
         const connectPayload = decodedMessage.payload.connect;
-        logger.info(
+        logger.debug(
           `[server] Connect request: gameId=${connectPayload.requestedGameId}, rows=${connectPayload.rows}, cols=${connectPayload.cols}, bombs=${connectPayload.numBombs}`
         );
         this.handleConnect(connectPayload.requestedGameId, connectPayload.rows, connectPayload.cols, connectPayload.numBombs);
@@ -147,7 +147,7 @@ export default class MessageReceiver {
       return;
     }
 
-    logger.info(`[server] Client attached to game ${this.currentGame.gameId}.`);
+    logger.debug(`[server] Client attached to game ${this.currentGame.gameId}.`);
 
     this.currentGame.messageSender.addClient(this.ws);
     this.currentGame.messageSender.sendConfirmation(this.ws, this.currentGame);
