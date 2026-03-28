@@ -2,6 +2,7 @@ import { GameState, NEW_GAME_ID, TileType, type ServerMessage } from "@saper/con
 import log from "loglevel";
 import type { GameEvent } from "@/game/gameEvents";
 import GameController from "@/game/gameController";
+import type { TransportClient } from "@/services/wsClient";
 
 type SessionConnectParams = {
   boardHeight: number;
@@ -9,14 +10,6 @@ type SessionConnectParams = {
   gameId: string;
   numBombs: number;
   connectionType: "create" | "join";
-};
-
-type TransportClient = {
-  connect(params: SessionConnectParams & { onServerMessage: (message: ServerMessage) => void }): Promise<void>;
-  disconnect(): void;
-  sendReset(): void;
-  revealTile(y: number, x: number): void;
-  flagTile(y: number, x: number, unflag: boolean): void;
 };
 
 const isTileType = (value: number): value is TileType =>

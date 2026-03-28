@@ -32,9 +32,9 @@ export interface ConnectRequest {
     numBombs: number;
 }
 /**
- * @generated from protobuf message saper.RevealTileRequest
+ * @generated from protobuf message saper.TileCoordinates
  */
-export interface RevealTileRequest {
+export interface TileCoordinates {
     /**
      * @generated from protobuf field: uint32 y = 1
      */
@@ -43,6 +43,15 @@ export interface RevealTileRequest {
      * @generated from protobuf field: uint32 x = 2
      */
     x: number;
+}
+/**
+ * @generated from protobuf message saper.RevealTileRequest
+ */
+export interface RevealTileRequest {
+    /**
+     * @generated from protobuf field: repeated saper.TileCoordinates tiles = 1
+     */
+    tiles: TileCoordinates[];
 }
 /**
  * @generated from protobuf message saper.FlagTileRequest
@@ -366,22 +375,22 @@ class ConnectRequest$Type extends MessageType<ConnectRequest> {
  */
 export const ConnectRequest = new ConnectRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
-class RevealTileRequest$Type extends MessageType<RevealTileRequest> {
+class TileCoordinates$Type extends MessageType<TileCoordinates> {
     constructor() {
-        super("saper.RevealTileRequest", [
+        super("saper.TileCoordinates", [
             { no: 1, name: "y", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 2, name: "x", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
-    create(value?: PartialMessage<RevealTileRequest>): RevealTileRequest {
+    create(value?: PartialMessage<TileCoordinates>): TileCoordinates {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.y = 0;
         message.x = 0;
         if (value !== undefined)
-            reflectionMergePartial<RevealTileRequest>(this, message, value);
+            reflectionMergePartial<TileCoordinates>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RevealTileRequest): RevealTileRequest {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: TileCoordinates): TileCoordinates {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
@@ -403,13 +412,60 @@ class RevealTileRequest$Type extends MessageType<RevealTileRequest> {
         }
         return message;
     }
-    internalBinaryWrite(message: RevealTileRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+    internalBinaryWrite(message: TileCoordinates, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
         /* uint32 y = 1; */
         if (message.y !== 0)
             writer.tag(1, WireType.Varint).uint32(message.y);
         /* uint32 x = 2; */
         if (message.x !== 0)
             writer.tag(2, WireType.Varint).uint32(message.x);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message saper.TileCoordinates
+ */
+export const TileCoordinates = new TileCoordinates$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class RevealTileRequest$Type extends MessageType<RevealTileRequest> {
+    constructor() {
+        super("saper.RevealTileRequest", [
+            { no: 1, name: "tiles", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => TileCoordinates }
+        ]);
+    }
+    create(value?: PartialMessage<RevealTileRequest>): RevealTileRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.tiles = [];
+        if (value !== undefined)
+            reflectionMergePartial<RevealTileRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: RevealTileRequest): RevealTileRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated saper.TileCoordinates tiles */ 1:
+                    message.tiles.push(TileCoordinates.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: RevealTileRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated saper.TileCoordinates tiles = 1; */
+        for (let i = 0; i < message.tiles.length; i++)
+            TileCoordinates.internalBinaryWrite(message.tiles[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

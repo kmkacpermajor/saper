@@ -1,6 +1,7 @@
 import {
   NEW_GAME_ID,
   decodeServerMessage,
+  type TileCoordinates,
   type ServerMessage
 } from "@saper/contracts";
 import log from "loglevel";
@@ -11,13 +12,21 @@ import {
   createRevealTilePayload
 } from "@/services/wsProtocol";
 
-type ConnectParams = {
+export type ConnectParams = {
   boardHeight: number;
   boardWidth: number;
   gameId: string;
   numBombs: number;
   connectionType: "create" | "join";
   onServerMessage: (message: ServerMessage) => void;
+};
+
+export type TransportClient = {
+  connect(params: ConnectParams): Promise<void>;
+  disconnect(): void;
+  revealTiles(tiles: TileCoordinates[]): void;
+  flagTile(y: number, x: number, unflag: boolean): void;
+  sendReset(): void;
 };
 
 const waitForOpenSocket = async (socket: WebSocket): Promise<void> => {
@@ -31,7 +40,7 @@ const waitForOpenSocket = async (socket: WebSocket): Promise<void> => {
   });
 };
 
-class WsClient {
+class WsClient implements TransportClient {
   private socket: WebSocket | undefined;
   private onServerMessage: ((message: ServerMessage) => void) | undefined;
 
@@ -60,8 +69,12 @@ class WsClient {
     }
   }
 
-  revealTile(y: number, x: number): void {
-    this.send(createRevealTilePayload(y, x));
+  revealTiles(tiles: TileCoordinates[]): void {
+    if (tiles.length === 0) {
+      return;
+    }
+
+    this.send(createRevealTilePayload(tiles));
   }
 
   flagTile(y: number, x: number, unflag: boolean): void {

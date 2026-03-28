@@ -86,7 +86,16 @@ export default class MessageReceiver {
           return;
         }
         const revealPayload = decodedMessage.payload.revealTile;
-        this.currentGame.revealTiles(revealPayload.y, revealPayload.x);
+        if (revealPayload.tiles.length === 0) {
+          logger.warn("[server] Empty reveal tile request received.");
+          this.sendProtocolError(
+            "EMPTY_REVEAL_REQUEST",
+            "RevealTileRequest.tiles must contain at least one tile."
+          );
+          return;
+        }
+        logger.debug(`[server] Reveal tile request: ${revealPayload.tiles.length} tiles.`);
+        this.currentGame.revealTiles(revealPayload.tiles);
         return;
       }
       case "reset": {

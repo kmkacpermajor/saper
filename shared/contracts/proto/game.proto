@@ -30,9 +30,13 @@ message ConnectRequest {
   uint32 num_bombs = 4;
 }
 
-message RevealTileRequest {
+message TileCoordinates {
   uint32 y = 1;
   uint32 x = 2;
+}
+
+message RevealTileRequest {
+  repeated TileCoordinates tiles = 1;
 }
 
 message FlagTileRequest {

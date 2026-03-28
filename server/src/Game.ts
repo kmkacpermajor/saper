@@ -1,4 +1,4 @@
-import { GameState, TileType, type TileUpdate } from "@saper/contracts";
+import { GameState, TileType, type TileCoordinates, type TileUpdate } from "@saper/contracts";
 import Board from "./Board.js";
 import MessageSender from "./MessageSender.js";
 
@@ -70,21 +70,35 @@ export default class Game {
     return this.board.numOfUnrevealedTiles === this.board.numBombs;
   }
 
-  revealTiles(y: number, x: number): void {
-    this.ensureBoardForFirstMove(y, x);
+  revealTiles(tiles: TileCoordinates[]): void {
+    if (tiles.length === 0) {
+      return;
+    }
+
+    const firstTile = tiles[0];
+    this.ensureBoardForFirstMove(firstTile.y, firstTile.x);
 
     if (!this.board || this.board.gameEnded) {
       return;
     }
 
-    const tilesToReveal = this.board.tilesToReveal(y, x);
-    if (!tilesToReveal || tilesToReveal.length === 0) {
+    const combinedTilesToReveal: TileUpdate[] = [];
+    for (const tile of tiles) {
+      const tilesToReveal = this.board.tilesToReveal(tile.y, tile.x);
+      if (!tilesToReveal || tilesToReveal.length === 0) {
+        continue;
+      }
+
+      combinedTilesToReveal.push(...tilesToReveal);
+    }
+
+    if (combinedTilesToReveal.length === 0) {
       return;
     }
 
-    this.messageSender.sendRevealTiles(tilesToReveal);
+    this.messageSender.sendRevealTiles(combinedTilesToReveal);
 
-    if (tilesToReveal.some((tile: TileUpdate) => tile.type === TileType.MINE)) {
+    if (combinedTilesToReveal.some((tile: TileUpdate) => tile.type === TileType.MINE)) {
       this.endGame(GameState.LOST);
       return;
     }

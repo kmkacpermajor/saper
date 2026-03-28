@@ -1,6 +1,7 @@
 import {
   CONTRACT_VERSION,
-  encodeClientMessage
+  encodeClientMessage,
+  type TileCoordinates
 } from "@saper/contracts";
 
 export const createConnectPayload = (
@@ -22,16 +23,16 @@ export const createConnectPayload = (
     }
   });
 
-export const createRevealTilePayload = (y: number, x: number): Uint8Array =>
-  encodeClientMessage({
+export const createRevealTilePayload = (tiles: TileCoordinates[]): Uint8Array => {
+  return encodeClientMessage({
     payload: {
       oneofKind: "revealTile",
       revealTile: {
-        y,
-        x
+        tiles
       }
     }
   });
+};
 
 export const createResetPayload = (): Uint8Array =>
   encodeClientMessage({
