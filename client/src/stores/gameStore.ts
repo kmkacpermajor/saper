@@ -1,24 +1,31 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 import { GameState } from "@saper/contracts";
-
-export type GameEvent =
-  | { type: "GAME_ID_UPDATE"; payload: string }
-  | { type: "GAME_STATE_UPDATE"; payload: GameState }
-  | { type: "NUM_BOMBS_UPDATE"; payload: number };
+import { GAME_EVENT_TYPE, type GameEvent as GameUpdateEvent } from "@/game/gameEvents";
+import GameSession from "@/game/gameSession";
+import { wsClient } from "@/services/wsClient";
 
 export const useGameStore = defineStore("game", () => {
   const boardWidth = ref(15);
   const boardHeight = ref(15);
   const numBombs = ref(15);
 
+  const gameCanvasContainer = ref<HTMLDivElement | null>(null);
+  const gameRunning = ref(false);
+  const connecting = ref(false);
+  const error = ref<string | null>(null);
+  const connectionType = ref<"create" | "join">("create");
+  const gameId = ref("");
+  const currentGameId = ref("");
+
   const currentGameState = ref(GameState.IN_PROGRESS);
   const currentNumBombs = ref(0);
+  let gameSession: GameSession | null = null;
 
   const maxBombs = computed(() => Math.floor(boardWidth.value * boardHeight.value * 0.35));
 
   const gameStatusMessage = computed(() => {
-    if (currentGameState.value === GameState.IN_PROGRESS) return "In progress";
+    if (currentGameState.value === GameState.IN_PROGRESS) return `Mine count: ${currentNumBombs.value}`;
     if (currentGameState.value === GameState.WON) return "You won! 🎉";
     return "You lost! 💥";
   });
@@ -28,26 +35,109 @@ export const useGameStore = defineStore("game", () => {
     currentNumBombs.value = 0;
   };
 
-  const applyServerGameEvent = (event: GameEvent): void => {
-    if (event.type === "GAME_STATE_UPDATE") {
+  const resetSessionState = (): void => {
+    currentGameId.value = "";
+    gameRunning.value = false;
+    resetRuntimeState();
+  };
+
+  const applyGameUpdateEvent = (event: GameUpdateEvent): void => {
+    if (event.type === GAME_EVENT_TYPE.GAME_ID_UPDATE) {
+      currentGameId.value = event.payload;
+      return;
+    }
+
+    if (event.type === GAME_EVENT_TYPE.GAME_STATE_UPDATE) {
       currentGameState.value = event.payload;
       return;
     }
 
-    if (event.type === "NUM_BOMBS_UPDATE") {
+    if (event.type === GAME_EVENT_TYPE.NUM_BOMBS_UPDATE) {
       currentNumBombs.value = event.payload;
     }
   };
 
+  const destroyGameSession = (): void => {
+    if (!gameSession) {
+      return;
+    }
+
+    gameSession.stop();
+    gameSession = null;
+  };
+
+  const connect = async (): Promise<void> => {
+    if (connecting.value) {
+      return;
+    }
+
+    error.value = null;
+    connecting.value = true;
+
+    try {
+      if (connectionType.value === "join" && !gameId.value) {
+        throw new Error("Please enter a Game ID");
+      }
+
+      if (numBombs.value > maxBombs.value) {
+        throw new Error("Too much");
+      }
+
+      destroyGameSession();
+
+      const session = new GameSession(wsClient, applyGameUpdateEvent);
+      const canvas = await session.start({
+        boardHeight: boardHeight.value,
+        boardWidth: boardWidth.value,
+        gameId: gameId.value,
+        numBombs: numBombs.value,
+        connectionType: connectionType.value
+      });
+      gameSession = session;
+
+      if (gameCanvasContainer.value) {
+        gameCanvasContainer.value.innerHTML = "";
+        gameCanvasContainer.value.appendChild(canvas);
+      }
+
+      gameRunning.value = true;
+    } catch (err: unknown) {
+      destroyGameSession();
+
+      const message = err instanceof Error ? err.message : "Unknown error";
+      error.value = `Connection failed: ${message}`;
+      console.error("Game connection error:", err);
+    } finally {
+      connecting.value = false;
+    }
+  };
+
+  const disconnect = (): void => {
+    destroyGameSession();
+    resetSessionState();
+  };
+
+  const resetGame = (): void => {
+    gameSession?.reset();
+  };
+
   return {
-    applyServerGameEvent,
+    connect,
+    disconnect,
+    resetGame,
+    gameCanvasContainer,
+    gameRunning,
+    connecting,
+    error,
+    connectionType,
+    gameId,
+    currentGameId,
     boardHeight,
     boardWidth,
     currentGameState,
     currentNumBombs,
     gameStatusMessage,
     maxBombs,
-    numBombs,
-    resetRuntimeState
+    numBombs
   };
 });

@@ -21,6 +21,8 @@ export default class Tile {
     sprite.height = this.tileSize;
     sprite.x = this.x * this.tileSize;
     sprite.y = this.y * this.tileSize;
+    sprite.eventMode = "static";
+    sprite.cursor = "pointer";
     return sprite;
   }
 }

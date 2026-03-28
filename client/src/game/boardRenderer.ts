@@ -2,8 +2,6 @@ import { Application, Assets, Container, Sprite, Texture } from "pixi.js";
 import { TileType } from "@saper/contracts";
 import Tile from "./tile";
 
-type TilePointerHandler = (y: number, x: number, button: number) => void;
-
 type TileTextures = {
   default: Texture | null;
   mine: Texture | null;
@@ -15,9 +13,7 @@ export default class BoardRenderer {
   readonly container = new Container();
 
   private readonly tileSize: number;
-  private app: Application | null = null;
   private board: Tile[][] = [];
-  private onPointer: TilePointerHandler | null = null;
   private rows = 0;
   private cols = 0;
   private textures: TileTextures = {
@@ -32,19 +28,15 @@ export default class BoardRenderer {
   }
 
   async init(app: Application): Promise<void> {
-    this.app = app;
     await this.loadTextures();
     app.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
-    app.canvas.addEventListener("pointerdown", this.handlePointerDown);
-    app.canvas.style.cursor = "pointer";
     app.stage.addChild(this.container);
   }
 
-  setupBoard(app: Application, rows: number, cols: number, onPointer: TilePointerHandler): void {
+  setupBoard(app: Application, rows: number, cols: number): void {
     this.rows = rows;
     this.cols = cols;
     app.renderer.resize(this.cols * this.tileSize, this.rows * this.tileSize);
-    this.onPointer = onPointer;
 
     this.container.removeChildren();
     this.board = Array.from({ length: this.rows }, (_, y) =>
@@ -61,69 +53,20 @@ export default class BoardRenderer {
     );
   }
 
-  setTileType(y: number, x: number, nextType: TileType): { previousType: TileType; nextType: TileType } | null {
+  renderTile(y: number, x: number, type: TileType): boolean {
     const tile = this.board[y]?.[x];
     if (!tile) {
-      return null;
+      return false;
     }
 
-    const previousType = tile.type;
-    if (previousType === nextType) {
-      return { previousType, nextType };
-    }
-
-    tile.type = nextType;
-    tile.sprite.texture = this.resolveTextureForTileType(nextType);
-
-    return { previousType, nextType };
-  }
-
-  getTileType(y: number, x: number): TileType | undefined {
-    return this.board[y]?.[x]?.type;
-  }
-
-  render(): void {
-    for (let y = 0; y < this.rows; y++) {
-      for (let x = 0; x < this.cols; x++) {
-        const tile = this.board[y][x];
-        tile.sprite.texture = this.resolveTextureForTileType(tile.type);
-      }
-    }
+    tile.sprite.texture = this.resolveTextureForTileType(type);
+    return true;
   }
 
   destroy(): void {
-    if (this.app) {
-      this.app.canvas.removeEventListener("pointerdown", this.handlePointerDown);
-    }
-
-    this.onPointer = null;
     this.container.removeChildren();
     this.board = [];
   }
-
-  private readonly handlePointerDown = (event: PointerEvent): void => {
-    if (!this.app || !this.onPointer) {
-      return;
-    }
-
-    const rect = this.app.canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) {
-      return;
-    }
-
-    const scaleX = this.app.canvas.width / rect.width;
-    const scaleY = this.app.canvas.height / rect.height;
-    const worldX = (event.clientX - rect.left) * scaleX;
-    const worldY = (event.clientY - rect.top) * scaleY;
-    const x = Math.floor(worldX / this.tileSize);
-    const y = Math.floor(worldY / this.tileSize);
-
-    if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) {
-      return;
-    }
-
-    this.onPointer(y, x, event.button);
-  };
 
   private async loadTextures(): Promise<void> {
     for (let i = 0; i < 9; i++) {

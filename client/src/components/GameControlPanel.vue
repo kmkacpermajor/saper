@@ -1,21 +1,16 @@
 <script setup lang="ts">
-const props = defineProps<{
-  gameId: string;
-  gameRunning: boolean;
-  statusText: string;
-}>();
+import { storeToRefs } from "pinia";
+import { useGameStore } from "@/stores/gameStore";
 
-const emit = defineEmits<{
-  (e: "disconnect"): void;
-  (e: "reset"): void;
-}>();
+const gameStore = useGameStore();
+const { currentGameId, gameRunning, gameStatusMessage } = storeToRefs(gameStore);
 
 const onDisconnect = (): void => {
-  emit("disconnect");
+  gameStore.disconnect();
 };
 
 const onReset = (): void => {
-  emit("reset");
+  gameStore.resetGame();
 };
 </script>
 
@@ -23,15 +18,15 @@ const onReset = (): void => {
   <div class="space-y-4">
     <div>
       <p class="text-sm text-gray-600">Game ID:</p>
-      <code class="block bg-gray-100 px-3 py-2 rounded font-mono text-sm">{{ props.gameId }}</code>
+      <code class="block bg-gray-100 px-3 py-2 rounded font-mono text-sm">{{ currentGameId }}</code>
     </div>
 
-    <p class="text-sm" :class="props.gameRunning ? 'text-green-600' : 'text-red-600'">
-      {{ props.statusText }}
+    <p class="text-sm" :class="gameRunning ? 'text-green-600' : 'text-red-600'">
+      {{ gameStatusMessage }}
     </p>
 
     <button
-      v-if="props.gameRunning"
+      v-if="gameRunning"
       @click="onReset"
       class="w-full bg-yellow-500 hover:bg-yellow-600 text-white py-2 px-4 rounded-md"
     >
