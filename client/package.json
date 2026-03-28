@@ -10,21 +10,21 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@saper/contracts": "file:../shared/contracts",
-    "@tailwindcss/postcss": "^4.1.4",
-    "@tailwindcss/vite": "^4.1.4",
+    "@saper/contracts": "file:..\\shared\\contracts",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@tailwindcss/vite": "^4.2.2",
     "loglevel": "^1.9.2",
     "pinia": "^3.0.4",
-    "pixi.js": "^8.9.2",
-    "tailwindcss": "^4.1.4",
-    "vue": "^3.5.13"
+    "pixi.js": "^8.17.1",
+    "tailwindcss": "^4.2.2",
+    "vue": "^3.5.31"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.2.3",
-    "typescript": "^5.8.2",
-    "vite": "^6.2.4",
-    "vite-plugin-vue-devtools": "^7.7.6",
-    "vue-tsc": "^2.2.8"
+    "@vitejs/plugin-vue": "^6.0.5",
+    "typescript": "^6.0.2",
+    "vite": "^7.3.1",
+    "vite-plugin-vue-devtools": "^8.1.1",
+    "vue-tsc": "^3.2.6"
   },
   "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"
 }
