@@ -9,8 +9,19 @@ type EventHandler = (event: GameEvent) => void;
 
 export default class GameController {
   private readonly tileSize = 25;
+  private readonly longPressDurationMs = 450;
+  private readonly touchMoveTolerancePx = 18;
+  private readonly hapticTapMs = 12;
+  private readonly hapticLongPressMs = 18;
+  private readonly hapticErrorPattern: number[] = [10, 40, 10];
   private boardState: TileType[][] = [];
   private gestureTile: TileCoordinates | null = null;
+  private touchGestureTile: TileCoordinates | null = null;
+  private touchStartClientPoint: { x: number; y: number } | null = null;
+  private touchLongPressTimer: ReturnType<typeof setTimeout> | null = null;
+  private touchLongPressTriggered = false;
+  private touchGestureCanceled = false;
+  private touchChordArmedForGesture = false;
   private mouseButtonsMask = 0;
   private chordArmedForGesture = false;
   private chordTriggeredForGesture = false;
@@ -94,6 +105,10 @@ export default class GameController {
     await this.boardRenderer.init(this.app);
     this.boardRenderer.container.eventMode = "static";
     this.app.canvas.addEventListener("mousedown", this.handleCanvasMouseDown);
+    this.app.canvas.addEventListener("touchstart", this.handleCanvasTouchStart, { passive: false });
+    this.app.canvas.addEventListener("touchmove", this.handleCanvasTouchMove, { passive: false });
+    this.app.canvas.addEventListener("touchend", this.handleCanvasTouchEnd, { passive: false });
+    this.app.canvas.addEventListener("touchcancel", this.handleCanvasTouchCancel, { passive: false });
     window.addEventListener("mouseup", this.handleWindowMouseUp);
     this.initialized = true;
   }
@@ -258,25 +273,147 @@ export default class GameController {
     }
   };
 
-  private tryChordReveal(centerTile: TileCoordinates): void {
+  private handleCanvasTouchStart = (event: TouchEvent): void => {
+    if (this.gameState !== GameState.IN_PROGRESS) {
+      return;
+    }
+
+    if (event.touches.length !== 1) {
+      this.cancelTouchGesture(true);
+      return;
+    }
+
+    const touch = event.touches[0];
+    const pointerTile = this.resolveTileFromClientPosition(touch.clientX, touch.clientY);
+    if (!pointerTile) {
+      this.cancelTouchGesture(true);
+      return;
+    }
+
+    event.preventDefault();
+    this.cancelTouchGesture(false);
+
+    this.touchGestureTile = pointerTile;
+    this.touchStartClientPoint = { x: touch.clientX, y: touch.clientY };
+    this.touchLongPressTriggered = false;
+    this.touchGestureCanceled = false;
+
+    this.touchLongPressTimer = setTimeout(() => {
+      if (
+        this.gameState !== GameState.IN_PROGRESS ||
+        this.touchGestureCanceled ||
+        this.touchGestureTile === null
+      ) {
+        return;
+      }
+
+      const tile = this.touchGestureTile;
+      const tileType = this.boardState[tile.y]?.[tile.x];
+      if (tileType === undefined) {
+        return;
+      }
+
+      if (tileType === TileType.HIDDEN) {
+        log.debug("[client] Long touch reveal triggered", { tile });
+        this.transportClient.revealTiles([tile]);
+        this.vibrate(this.hapticLongPressMs);
+      } else if (tileType !== TileType.FLAGGED) {
+        this.applyChordPreview(tile);
+        this.touchChordArmedForGesture = true;
+        log.debug("[client] Long touch chord armed", { tile });
+        this.vibrate(this.hapticTapMs);
+      }
+
+      this.touchLongPressTriggered = true;
+    }, this.longPressDurationMs);
+  };
+
+  private handleCanvasTouchMove = (event: TouchEvent): void => {
+    if (this.touchGestureTile === null || this.touchGestureCanceled) {
+      return;
+    }
+
+    if (event.touches.length !== 1) {
+      this.cancelTouchGesture(true);
+      return;
+    }
+
+    const touch = event.touches[0];
+    const startPoint = this.touchStartClientPoint;
+    if (!startPoint) {
+      this.cancelTouchGesture(true);
+      return;
+    }
+
+    const movedDistance = Math.hypot(touch.clientX - startPoint.x, touch.clientY - startPoint.y);
+    if (movedDistance > this.touchMoveTolerancePx) {
+      this.cancelTouchGesture(true);
+      return;
+    }
+
+    event.preventDefault();
+  };
+
+  private handleCanvasTouchEnd = (event: TouchEvent): void => {
+    if (this.touchGestureTile === null) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const tile = this.touchGestureTile;
+    const longPressTriggered = this.touchLongPressTriggered;
+    const wasCanceled = this.touchGestureCanceled;
+    const touch = event.changedTouches[0];
+
+    this.clearTouchLongPressTimer();
+
+    if (longPressTriggered && this.touchChordArmedForGesture && this.gameState === GameState.IN_PROGRESS) {
+      this.clearChordPreview();
+      log.debug("[client] Long touch chord reveal triggered on release", { tile });
+      const chordRevealTriggered = this.tryChordReveal(tile);
+      this.vibrate(chordRevealTriggered ? this.hapticLongPressMs : this.hapticErrorPattern);
+    }
+
+    if (!longPressTriggered && !wasCanceled && touch && this.gameState === GameState.IN_PROGRESS) {
+      const pointerTile = this.resolveTileFromClientPosition(touch.clientX, touch.clientY);
+      if (pointerTile && this.isSameTile(tile, pointerTile)) {
+        const tileType = this.boardState[tile.y]?.[tile.x];
+        if (tileType === TileType.HIDDEN || tileType === TileType.FLAGGED) {
+          log.debug("[client] Single tap flag toggle triggered", { tile, unflag: tileType === TileType.FLAGGED });
+          this.transportClient.flagTile(tile.y, tile.x, tileType === TileType.FLAGGED);
+          this.vibrate(this.hapticTapMs);
+        }
+      }
+    }
+
+    this.resetTouchState();
+  };
+
+  private handleCanvasTouchCancel = (): void => {
+    this.cancelTouchGesture(true);
+    this.resetTouchState();
+  };
+
+  private tryChordReveal(centerTile: TileCoordinates): boolean {
     const tileType = this.boardState[centerTile.y]?.[centerTile.x];
     if (tileType === undefined || tileType === TileType.HIDDEN || tileType === TileType.FLAGGED) {
-      return;
+      return false;
     }
 
     const adjacentMines = this.resolveAdjacentMines(tileType);
     if (adjacentMines === null) {
-      return;
+      return false;
     }
 
     const flaggedNeighbors = this.countFlaggedNeighbors(centerTile.y, centerTile.x);
-    if (flaggedNeighbors !== adjacentMines) {
+    if (adjacentMines > 0 && flaggedNeighbors !== adjacentMines) {
       log.debug("[client] Chord skipped due to flag mismatch", {
         tile: centerTile,
         flaggedNeighbors,
         adjacentMines
       });
-      return;
+      return false;
     }
 
     const hiddenNeighbors = this.collectHiddenNeighbors(centerTile.y, centerTile.x);
@@ -286,10 +423,11 @@ export default class GameController {
         hiddenNeighborsCount: hiddenNeighbors.length
       });
       this.transportClient.revealTiles(hiddenNeighbors);
-      return;
+      return true;
     }
 
     log.debug("[client] Chord had no hidden neighbors", { tile: centerTile });
+    return false;
   }
 
   private applyChordPreview(centerTile: TileCoordinates): void {
@@ -333,13 +471,17 @@ export default class GameController {
   }
 
   private resolveTileFromMouseEvent(event: MouseEvent): TileCoordinates | null {
+    return this.resolveTileFromClientPosition(event.clientX, event.clientY);
+  }
+
+  private resolveTileFromClientPosition(clientX: number, clientY: number): TileCoordinates | null {
     const rect = this.app.canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) {
       return null;
     }
 
-    const normalizedX = event.clientX - rect.left;
-    const normalizedY = event.clientY - rect.top;
+    const normalizedX = clientX - rect.left;
+    const normalizedY = clientY - rect.top;
     if (normalizedX < 0 || normalizedY < 0 || normalizedX > rect.width || normalizedY > rect.height) {
       return null;
     }
@@ -356,6 +498,38 @@ export default class GameController {
     return { y, x };
   }
 
+  private clearTouchLongPressTimer(): void {
+    if (this.touchLongPressTimer === null) {
+      return;
+    }
+
+    clearTimeout(this.touchLongPressTimer);
+    this.touchLongPressTimer = null;
+  }
+
+  private cancelTouchGesture(markCanceled: boolean): void {
+    this.clearTouchLongPressTimer();
+    if (markCanceled) {
+      this.touchGestureCanceled = true;
+      if (this.touchChordArmedForGesture) {
+        this.clearChordPreview();
+        this.touchChordArmedForGesture = false;
+      }
+    }
+  }
+
+  private resetTouchState(): void {
+    this.clearTouchLongPressTimer();
+    this.touchGestureTile = null;
+    this.touchStartClientPoint = null;
+    this.touchLongPressTriggered = false;
+    this.touchGestureCanceled = false;
+    if (this.touchChordArmedForGesture) {
+      this.clearChordPreview();
+    }
+    this.touchChordArmedForGesture = false;
+  }
+
   private resetPointerState(): void {
     this.clearChordPreview();
     log.debug("[client] Resetting gesture state", {
@@ -366,6 +540,14 @@ export default class GameController {
     this.mouseButtonsMask = 0;
     this.chordArmedForGesture = false;
     this.chordTriggeredForGesture = false;
+  }
+
+  private vibrate(pattern: number | number[]): void {
+    if (typeof navigator === "undefined" || typeof navigator.vibrate !== "function") {
+      return;
+    }
+
+    navigator.vibrate(pattern);
   }
 
   private isSameTile(a: TileCoordinates | null, b: TileCoordinates): boolean {
@@ -443,7 +625,12 @@ export default class GameController {
   cleanup(): void {
     log.info("[client] Cleaning up game instance.");
     this.app.canvas.removeEventListener("mousedown", this.handleCanvasMouseDown);
+    this.app.canvas.removeEventListener("touchstart", this.handleCanvasTouchStart);
+    this.app.canvas.removeEventListener("touchmove", this.handleCanvasTouchMove);
+    this.app.canvas.removeEventListener("touchend", this.handleCanvasTouchEnd);
+    this.app.canvas.removeEventListener("touchcancel", this.handleCanvasTouchCancel);
     window.removeEventListener("mouseup", this.handleWindowMouseUp);
+    this.resetTouchState();
     this.app.ticker.stop();
     this.boardRenderer.destroy();
     this.app.stage.destroy({ children: true });
