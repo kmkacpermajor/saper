@@ -21,7 +21,7 @@ services:
       context: .
       dockerfile: client/Dockerfile
       args:
-        VITE_WS_URL: ${VITE_WS_URL:-ws://kacper.majorkow.ski/saper-ws}
+        VITE_WS_URL: ${VITE_WS_URL:-wss://saper.majorkow.ski/ws}
     restart: unless-stopped
     depends_on:
       - server

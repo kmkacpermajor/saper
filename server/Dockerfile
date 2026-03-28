@@ -7,6 +7,9 @@ WORKDIR /app
 COPY server ./server
 COPY shared/contracts ./shared/contracts
 
+RUN pnpm --dir /app/shared/contracts install --no-frozen-lockfile
+RUN pnpm --dir /app/shared/contracts build
+
 WORKDIR /app/server
 
 RUN pnpm install --no-frozen-lockfile

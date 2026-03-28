@@ -10,6 +10,9 @@ COPY shared/contracts ./shared/contracts
 ARG VITE_WS_URL=ws://localhost:8085
 ENV VITE_WS_URL=$VITE_WS_URL
 
+RUN pnpm --dir /app/shared/contracts install --no-frozen-lockfile
+RUN pnpm --dir /app/shared/contracts build
+
 RUN pnpm --dir client install --no-frozen-lockfile
 RUN pnpm --dir client build
 
