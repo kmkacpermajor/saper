@@ -15,11 +15,25 @@ export default class TouchInputHandler {
   private touchLongPressTriggered = false;
   private touchGestureCanceled = false;
   private touchChordArmedForGesture = false;
+  private panActive = false;
+  private panLastPoint: { x: number; y: number } | null = null;
+  private pinchActive = false;
+  private pinchLastDistance = 0;
 
   constructor(private readonly controller: GameController) {}
 
   handleCanvasTouchStart = (event: TouchEvent): void => {
     if (!this.controller.isGameInProgress()) {
+      return;
+    }
+
+    if (event.touches.length === 2) {
+      this.cancelTouchGesture(true);
+      this.touchGestureTile = null;
+      this.touchStartClientPoint = null;
+      this.pinchActive = true;
+      this.pinchLastDistance = this.resolveTouchesDistance(event.touches[0], event.touches[1]);
+      event.preventDefault();
       return;
     }
 
@@ -43,6 +57,9 @@ export default class TouchInputHandler {
 
     this.touchGestureTile = pointerTile;
     this.touchStartClientPoint = { x: touch.clientX, y: touch.clientY };
+    this.panLastPoint = { x: touch.clientX, y: touch.clientY };
+    this.panActive = false;
+    this.pinchActive = false;
     this.touchLongPressTriggered = false;
     this.touchGestureCanceled = false;
 
@@ -75,7 +92,31 @@ export default class TouchInputHandler {
   };
 
   handleCanvasTouchMove = (event: TouchEvent): void => {
-    if (this.touchGestureTile === null || this.touchGestureCanceled) {
+    if (event.touches.length === 2) {
+      const [firstTouch, secondTouch] = [event.touches[0], event.touches[1]];
+      const distance = this.resolveTouchesDistance(firstTouch, secondTouch);
+      const midX = (firstTouch.clientX + secondTouch.clientX) / 2;
+      const midY = (firstTouch.clientY + secondTouch.clientY) / 2;
+
+      if (!this.pinchActive) {
+        this.cancelTouchGesture(true);
+        this.pinchActive = true;
+        this.pinchLastDistance = distance;
+        event.preventDefault();
+        return;
+      }
+
+      if (this.pinchLastDistance > 0) {
+        const factor = distance / this.pinchLastDistance;
+        this.controller.zoomViewportAtClientPoint(midX, midY, factor);
+      }
+
+      this.pinchLastDistance = distance;
+      event.preventDefault();
+      return;
+    }
+
+    if (this.pinchActive || this.touchGestureTile === null || this.touchGestureCanceled) {
       return;
     }
 
@@ -93,14 +134,31 @@ export default class TouchInputHandler {
 
     const movedDistance = Math.hypot(touch.clientX - startPoint.x, touch.clientY - startPoint.y);
     if (movedDistance > TOUCH_MOVE_TOLERANCE_PX) {
-      this.cancelTouchGesture(true);
-      return;
+      if (!this.panActive) {
+        this.cancelTouchGesture(true);
+      }
+      this.panActive = true;
     }
+
+    if (this.panActive) {
+      const lastPoint = this.panLastPoint ?? startPoint;
+      const dx = touch.clientX - lastPoint.x;
+      const dy = touch.clientY - lastPoint.y;
+      this.controller.panViewportByScreenDelta(dx, dy);
+    }
+
+    this.panLastPoint = { x: touch.clientX, y: touch.clientY };
 
     event.preventDefault();
   };
 
   handleCanvasTouchEnd = (event: TouchEvent): void => {
+    if (this.pinchActive || this.panActive) {
+      event.preventDefault();
+      this.reset();
+      return;
+    }
+
     if (this.touchGestureTile === null) {
       return;
     }
@@ -149,8 +207,12 @@ export default class TouchInputHandler {
     this.clearTouchLongPressTimer();
     this.touchGestureTile = null;
     this.touchStartClientPoint = null;
+    this.panLastPoint = null;
     this.touchLongPressTriggered = false;
     this.touchGestureCanceled = false;
+    this.panActive = false;
+    this.pinchActive = false;
+    this.pinchLastDistance = 0;
     if (this.touchChordArmedForGesture) {
       this.controller.clearChordPreview();
     }
@@ -175,5 +237,9 @@ export default class TouchInputHandler {
         this.touchChordArmedForGesture = false;
       }
     }
+  }
+
+  private resolveTouchesDistance(firstTouch: Touch, secondTouch: Touch): number {
+    return Math.hypot(firstTouch.clientX - secondTouch.clientX, firstTouch.clientY - secondTouch.clientY);
   }
 }

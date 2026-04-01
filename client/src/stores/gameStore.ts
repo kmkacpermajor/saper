@@ -1,4 +1,4 @@
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 import { defineStore } from "pinia";
 import { GameState } from "@saper/contracts";
 import { GAME_EVENT_TYPE, type GameEvent as GameUpdateEvent } from "@/game/gameEvents";
@@ -96,12 +96,17 @@ export const useGameStore = defineStore("game", () => {
       });
       gameSession = session;
 
+      gameRunning.value = true;
+      await nextTick();
+
       if (gameCanvasContainer.value) {
         gameCanvasContainer.value.innerHTML = "";
+        canvas.style.display = "block";
+        canvas.style.borderRadius = "0.375rem";
         gameCanvasContainer.value.appendChild(canvas);
       }
 
-      gameRunning.value = true;
+      gameSession.fitViewport();
     } catch (err: unknown) {
       destroyGameSession();
 
@@ -122,10 +127,30 @@ export const useGameStore = defineStore("game", () => {
     gameSession?.reset();
   };
 
+  const zoomIn = (): void => {
+    gameSession?.zoomIn();
+  };
+
+  const zoomOut = (): void => {
+    gameSession?.zoomOut();
+  };
+
+  const fitViewport = (): void => {
+    gameSession?.fitViewport();
+  };
+
+  const centerViewport = (): void => {
+    gameSession?.centerViewport();
+  };
+
   return {
     connect,
     disconnect,
     resetGame,
+    zoomIn,
+    zoomOut,
+    fitViewport,
+    centerViewport,
     gameCanvasContainer,
     gameRunning,
     connecting,

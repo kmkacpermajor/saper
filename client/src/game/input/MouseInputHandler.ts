@@ -9,14 +9,28 @@ const isSameTile = (a: TileCoordinates | null, b: TileCoordinates): boolean =>
   a !== null && a.y === b.y && a.x === b.x;
 
 export default class MouseInputHandler {
+  private readonly panActivationDistancePx = 6;
   private mouseButtonsMask = 0;
   private gestureTile: TileCoordinates | null = null;
   private chordArmedForGesture = false;
   private chordTriggeredForGesture = false;
+  private dragLastPoint: { x: number; y: number } | null = null;
+  private dragDistancePx = 0;
+  private panActive = false;
 
   constructor(private readonly controller: GameController) {}
 
   handleCanvasMouseDown = (event: MouseEvent): void => {
+    const previousMask = this.mouseButtonsMask;
+    const currentMask = event.buttons & 0b11;
+    this.mouseButtonsMask = currentMask;
+
+    if (currentMask === 0b01) {
+      this.dragLastPoint = { x: event.clientX, y: event.clientY };
+      this.dragDistancePx = 0;
+      this.panActive = false;
+    }
+
     if (!this.controller.isGameInProgress()) {
       return;
     }
@@ -28,10 +42,6 @@ export default class MouseInputHandler {
     if (!pointerTile) {
       return;
     }
-
-    const previousMask = this.mouseButtonsMask;
-    const currentMask = event.buttons & 0b11;
-    this.mouseButtonsMask = currentMask;
 
     if (previousMask === 0 || this.gestureTile === null || !isSameTile(this.gestureTile, pointerTile)) {
       this.gestureTile = pointerTile;
@@ -58,6 +68,26 @@ export default class MouseInputHandler {
       gestureTile: this.gestureTile,
       chordTriggeredForGesture: this.chordTriggeredForGesture
     });
+  };
+
+  handleWindowMouseMove = (event: MouseEvent): void => {
+    if ((this.mouseButtonsMask & 0b01) === 0 || this.mouseButtonsMask !== 0b01 || !this.dragLastPoint) {
+      return;
+    }
+
+    const dx = event.clientX - this.dragLastPoint.x;
+    const dy = event.clientY - this.dragLastPoint.y;
+    this.dragDistancePx += Math.hypot(dx, dy);
+
+    if (!this.panActive && this.dragDistancePx >= this.panActivationDistancePx) {
+      this.panActive = true;
+    }
+
+    if (this.panActive) {
+      this.controller.panViewportByScreenDelta(dx, dy);
+    }
+
+    this.dragLastPoint = { x: event.clientX, y: event.clientY };
   };
 
   handleWindowMouseUp = (event: MouseEvent): void => {
@@ -99,7 +129,7 @@ export default class MouseInputHandler {
       event.clientY
     );
     const shouldSkipSingleAction =
-      previousMask === 0b11 || this.chordArmedForGesture || this.chordTriggeredForGesture;
+      previousMask === 0b11 || this.chordArmedForGesture || this.chordTriggeredForGesture || this.panActive;
 
     if (
       !shouldSkipSingleAction &&
@@ -149,5 +179,8 @@ export default class MouseInputHandler {
     this.mouseButtonsMask = 0;
     this.chordArmedForGesture = false;
     this.chordTriggeredForGesture = false;
+    this.dragLastPoint = null;
+    this.dragDistancePx = 0;
+    this.panActive = false;
   }
 }

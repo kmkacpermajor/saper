@@ -59,6 +59,22 @@ export default class GameSession {
     this.transportClient.sendReset();
   }
 
+  zoomIn(): void {
+    this.controller?.zoomViewportAtCanvasCenter(1.12);
+  }
+
+  zoomOut(): void {
+    this.controller?.zoomViewportAtCanvasCenter(0.88);
+  }
+
+  fitViewport(): void {
+    this.controller?.fitViewport();
+  }
+
+  centerViewport(): void {
+    this.controller?.centerViewport();
+  }
+
   private createServerMessageHandler(
     controller: GameController
   ): (message: ServerMessage) => void {

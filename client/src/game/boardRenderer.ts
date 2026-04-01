@@ -33,10 +33,9 @@ export default class BoardRenderer {
     app.stage.addChild(this.container);
   }
 
-  setupBoard(app: Application, rows: number, cols: number): void {
+  setupBoard(rows: number, cols: number): void {
     this.rows = rows;
     this.cols = cols;
-    app.renderer.resize(this.cols * this.tileSize, this.rows * this.tileSize);
 
     this.container.removeChildren();
     this.board = Array.from({ length: this.rows }, (_, y) =>
