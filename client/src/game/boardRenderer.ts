@@ -69,13 +69,20 @@ export default class BoardRenderer {
   }
 
   private async loadTextures(): Promise<void> {
-    for (let i = 0; i < 9; i++) {
-      this.textures.numbers[i] = (await Assets.load(new URL(`/src/assets/${i}.png`, import.meta.url).href)) as Texture;
-    }
+    const sheet = await Assets.load('/src/assets/spritesheet.json');
 
-    this.textures.default = (await Assets.load(new URL("/src/assets/revealed.png", import.meta.url).href)) as Texture;
-    this.textures.mine = (await Assets.load(new URL("/src/assets/mine.png", import.meta.url).href)) as Texture;
-    this.textures.flag = (await Assets.load(new URL("/src/assets/flag.png", import.meta.url).href)) as Texture;
+    const get = (name: string): Texture => {
+      const texture = sheet.textures[name];
+      if (!texture) {
+        throw new Error(`Missing frame in spritesheet: ${name}`);
+      }
+      return texture;
+    };
+
+    this.textures.default = get("unrevealed");
+    this.textures.mine = get("bomb");
+    this.textures.flag = get("flag");
+    this.textures.numbers = Array.from({ length: 9 }, (_, i) => get(`${i}`));
   }
 
   private resolveTextureForTileType(type: TileType): Texture {

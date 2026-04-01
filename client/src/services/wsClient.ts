@@ -25,7 +25,7 @@ export type TransportClient = {
   connect(params: ConnectParams): Promise<void>;
   disconnect(): void;
   revealTiles(tiles: TileCoordinates[]): void;
-  flagTile(y: number, x: number, unflag: boolean): void;
+  flagTile(tile: TileCoordinates, unflag: boolean): void;
   sendReset(): void;
 };
 
@@ -88,20 +88,20 @@ class WsClient implements TransportClient {
     this.send(createRevealTilePayload(tiles));
   }
 
-  flagTile(y: number, x: number, unflag: boolean): void {
-    this.send(createFlagTilePayload(y, x, unflag));
+  flagTile(tile: TileCoordinates, unflag: boolean): void {
+    this.send(createFlagTilePayload(tile.y, tile.x, unflag));
   }
 
   sendReset(): void {
     this.send(createResetPayload());
   }
 
-  private send(payload: Uint8Array): void {
+  private send(payload: Uint8Array<ArrayBufferLike>): void {
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
       return;
     }
 
-    this.socket.send(payload);
+    this.socket.send(new Uint8Array(payload));
   }
 
   private setupSocketHandlers(): void {
