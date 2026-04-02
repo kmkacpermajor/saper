@@ -9,6 +9,7 @@ import TouchInputHandler from "./input/TouchInputHandler";
 import ViewportController from "./viewportController";
 
 type EventHandler = (event: GameEvent) => void;
+type RevealTileUpdate = { y: number; x: number; type: TileType };
 
 export default class GameController {
   private readonly tileSize = 32;
@@ -96,7 +97,8 @@ export default class GameController {
       width: 0,
       height: 0,
       backgroundColor: 0x000000,
-      backgroundAlpha: 0
+      backgroundAlpha: 0,
+      preference: 'webgpu',
     });
 
     await this.boardRenderer.init(this.app);
@@ -133,24 +135,41 @@ export default class GameController {
     }, 0);
   }
 
-  applyRevealTile(y: number, x: number, type: TileType): void {
-    const previousType = this.boardState[y]?.[x];
-    if (previousType === undefined) {
+  applyRevealTiles(tiles: ReadonlyArray<RevealTileUpdate>): void {
+    if (tiles.length === 0) {
       return;
     }
 
-    if (previousType === type) {
-      this.boardRenderer.renderTile(y, x, type);
-      return;
+    let numBombsDelta = 0;
+    const tilesToRender: RevealTileUpdate[] = [];
+
+    for (const tile of tiles) {
+      const previousType = this.boardState[tile.y]?.[tile.x];
+      if (previousType === undefined) {
+        continue;
+      }
+
+      if (previousType === tile.type) {
+        continue;
+      }
+
+      this.boardState[tile.y][tile.x] = tile.type;
+
+      if (previousType !== TileType.FLAGGED && tile.type === TileType.FLAGGED) {
+        numBombsDelta--;
+      } else if (previousType === TileType.FLAGGED && tile.type !== TileType.FLAGGED) {
+        numBombsDelta++;
+      }
+
+      tilesToRender.push(tile);
     }
 
-    this.boardState[y][x] = type;
-    this.boardRenderer.renderTile(y, x, type);
+    if (tilesToRender.length > 0) {
+      this.boardRenderer.renderTiles(tilesToRender);
+    }
 
-    if (previousType !== TileType.FLAGGED && type === TileType.FLAGGED) {
-      this.numBombs--;
-    } else if (previousType === TileType.FLAGGED && type !== TileType.FLAGGED) {
-      this.numBombs++;
+    if (numBombsDelta !== 0) {
+      this.numBombs = this.numBombs + numBombsDelta;
     }
   }
 
@@ -236,9 +255,7 @@ export default class GameController {
     }
 
     const hiddenNeighbors = this.collectHiddenNeighbors(centerTile.y, centerTile.x);
-    for (const tile of hiddenNeighbors) {
-      this.boardRenderer.renderTile(tile.y, tile.x, TileType.EMPTY);
-    }
+    this.boardRenderer.renderTiles(hiddenNeighbors.map((tile) => ({ y: tile.y, x: tile.x, type: TileType.EMPTY })));
 
     this.chordPreviewTiles = hiddenNeighbors;
     if (hiddenNeighbors.length > 0) {
@@ -254,13 +271,18 @@ export default class GameController {
       return;
     }
 
+    const tilesToRender: RevealTileUpdate[] = [];
     for (const tile of this.chordPreviewTiles) {
       const currentType = this.boardState[tile.y]?.[tile.x];
       if (currentType === undefined) {
         continue;
       }
 
-      this.boardRenderer.renderTile(tile.y, tile.x, currentType);
+      tilesToRender.push({ y: tile.y, x: tile.x, type: currentType });
+    }
+
+    if (tilesToRender.length > 0) {
+      this.boardRenderer.renderTiles(tilesToRender);
     }
 
     log.debug("[client] Chord preview cleared", { previewTiles: this.chordPreviewTiles.length });
@@ -394,12 +416,10 @@ export default class GameController {
     const canvasX = normalizedX * scaleX;
     const canvasY = normalizedY * scaleY;
 
-    const { zoom } = this.viewportController.getState();
-    const { x: horizontalOffset, y: verticalOffset } = this.resolveBoardOffsets(zoom);
     this.viewportController.zoomAtScreenPoint(
       scaleFactor,
-      canvasX - horizontalOffset,
-      canvasY - verticalOffset
+      canvasX,
+      canvasY
     );
     this.applyViewportTransform();
   }
@@ -436,6 +456,7 @@ export default class GameController {
     const height = Math.max(240, Math.floor(parent?.clientHeight ?? window.innerHeight));
 
     this.app.renderer.resize(width, height);
+
     this.viewportController.setViewportSize(width, height);
 
     if (fitToViewport) {
@@ -448,11 +469,14 @@ export default class GameController {
   private applyViewportTransform(): void {
     const { cameraX, cameraY, zoom } = this.viewportController.getState();
     const { x: horizontalOffset, y: verticalOffset } = this.resolveBoardOffsets(zoom);
-
     this.boardRenderer.container.scale.set(zoom);
     this.boardRenderer.container.position.set(
       horizontalOffset - cameraX * zoom,
       verticalOffset - cameraY * zoom
+    );
+
+    this.boardRenderer.updateVisibleWorld(
+      this.resolveVisibleWorld(cameraX, cameraY, zoom, horizontalOffset, verticalOffset)
     );
   }
 
@@ -463,6 +487,26 @@ export default class GameController {
     return {
       x: Math.max(0, (this.app.renderer.width - worldPixelWidth * zoom) / 2),
       y: Math.max(0, (this.app.renderer.height - worldPixelHeight * zoom) / 2)
+    };
+  }
+
+  private resolveVisibleWorld(
+    cameraX: number,
+    cameraY: number,
+    zoom: number,
+    horizontalOffset: number,
+    verticalOffset: number
+  ): { x: number; y: number; width: number; height: number } {
+    const startX = cameraX + (0 - horizontalOffset) / zoom;
+    const startY = cameraY + (0 - verticalOffset) / zoom;
+    const endX = cameraX + (this.app.renderer.width - horizontalOffset) / zoom;
+    const endY = cameraY + (this.app.renderer.height - verticalOffset) / zoom;
+
+    return {
+      x: Math.min(startX, endX),
+      y: Math.min(startY, endY),
+      width: Math.abs(endX - startX),
+      height: Math.abs(endY - startY)
     };
   }
 

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onBeforeUnmount } from "vue";
+import { onBeforeUnmount, onMounted } from "vue";
 import { storeToRefs } from "pinia";
 import GameControlPanel from "@/components/GameControlPanel.vue";
 import GameSetupForm from "@/components/GameSetupForm.vue";
+import log from "@/services/logger";
+import { preloadGameAssets } from "@/game/gameAssets";
 import { useGameStore } from "@/stores/gameStore";
 
 const gameStore = useGameStore();
@@ -10,6 +12,12 @@ const { gameCanvasContainer, gameRunning } = storeToRefs(gameStore);
 
 onBeforeUnmount(() => {
   gameStore.disconnect();
+});
+
+onMounted(() => {
+  void preloadGameAssets().catch((error) => {
+    log.warn("[client] Spritesheet preload failed; it will be loaded on demand.", error);
+  });
 });
 </script>
 

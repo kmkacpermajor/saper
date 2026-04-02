@@ -87,6 +87,8 @@ export default class GameSession {
         }
 
         case "revealTiles": {
+          const revealUpdates: Array<{ y: number; x: number; type: TileType }> = [];
+
           for (const tile of message.payload.revealTiles.tiles) {
             if (!isTileType(tile.type)) {
               continue;
@@ -96,8 +98,10 @@ export default class GameSession {
               continue;
             }
 
-            controller.applyRevealTile(tile.y, tile.x, tile.type);
+            revealUpdates.push({ y: tile.y, x: tile.x, type: tile.type });
           }
+
+          controller.applyRevealTiles(revealUpdates);
           return;
         }
 

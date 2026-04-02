@@ -1,6 +1,6 @@
-import { Application, Assets, Container, Sprite, Texture } from "pixi.js";
+import { Application, Container, Sprite, Texture } from "pixi.js";
 import { TileType } from "@saper/contracts";
-import Tile from "./tile";
+import { loadGameSpritesheet } from "./gameAssets";
 
 type TileTextures = {
   default: Texture | null;
@@ -9,13 +9,20 @@ type TileTextures = {
   numbers: Texture[];
 };
 
+type RenderTileUpdate = { y: number; x: number; type: TileType };
+type VisibleWorld = { x: number; y: number; width: number; height: number };
+
 export default class BoardRenderer {
   readonly container = new Container();
 
   private readonly tileSize: number;
-  private board: Tile[][] = [];
+  private readonly overscanTiles = 2;
   private rows = 0;
   private cols = 0;
+  private tileTypes: TileType[][] = [];
+  private spritePool: Sprite[] = [];
+  private poolAssignments: Array<number | null> = [];
+  private readonly tileToPoolIndex = new Map<number, number>();
   private textures: TileTextures = {
     default: null,
     mine: null,
@@ -36,39 +43,101 @@ export default class BoardRenderer {
   setupBoard(rows: number, cols: number): void {
     this.rows = rows;
     this.cols = cols;
-
-    this.container.removeChildren();
-    this.board = Array.from({ length: this.rows }, (_, y) =>
-      Array.from({ length: this.cols }, (_, x) => {
-        const defaultTexture = this.textures.default;
-        if (!defaultTexture) {
-          throw new Error("Default texture is not loaded");
-        }
-
-        const tile = new Tile(y, x, this.tileSize, new Sprite(defaultTexture));
-        this.container.addChild(tile.sprite);
-        return tile;
-      })
+    this.tileTypes = Array.from({ length: this.rows }, () =>
+      Array.from({ length: this.cols }, () => TileType.HIDDEN)
     );
+
+    this.tileToPoolIndex.clear();
+    for (let i = 0; i < this.poolAssignments.length; i++) {
+      this.poolAssignments[i] = null;
+    }
   }
 
-  renderTile(y: number, x: number, type: TileType): boolean {
-    const tile = this.board[y]?.[x];
-    if (!tile) {
-      return false;
+  renderTiles(tiles: ReadonlyArray<RenderTileUpdate>): void {
+    for (const tile of tiles) {
+      if (this.tileTypes[tile.y]?.[tile.x] === undefined) {
+        continue;
+      }
+
+      this.tileTypes[tile.y][tile.x] = tile.type;
+      const tileIndex = this.toTileIndex(tile.y, tile.x);
+      const poolIndex = this.tileToPoolIndex.get(tileIndex);
+      if (poolIndex === undefined) {
+        continue;
+      }
+
+      const sprite = this.spritePool[poolIndex];
+      const nextTexture = this.resolveTextureForTileType(tile.type);
+      if (sprite.texture !== nextTexture) {
+        sprite.texture = nextTexture;
+      }
+    }
+  }
+
+  updateVisibleWorld(view: VisibleWorld): void {
+    if (this.rows === 0 || this.cols === 0) {
+      return;
     }
 
-    tile.sprite.texture = this.resolveTextureForTileType(type);
-    return true;
+    const minTileX = this.clampToRange(Math.floor(view.x / this.tileSize) - this.overscanTiles, 0, this.cols - 1);
+    const minTileY = this.clampToRange(Math.floor(view.y / this.tileSize) - this.overscanTiles, 0, this.rows - 1);
+    const maxTileX = this.clampToRange(
+      Math.floor((view.x + view.width) / this.tileSize) + this.overscanTiles,
+      0,
+      this.cols - 1
+    );
+    const maxTileY = this.clampToRange(
+      Math.floor((view.y + view.height) / this.tileSize) + this.overscanTiles,
+      0,
+      this.rows - 1
+    );
+
+    if (maxTileX < minTileX || maxTileY < minTileY) {
+      this.hideAllPoolSprites();
+      return;
+    }
+
+    const requiredSprites = (maxTileX - minTileX + 1) * (maxTileY - minTileY + 1);
+    this.ensurePoolSize(requiredSprites);
+    this.tileToPoolIndex.clear();
+
+    let poolCursor = 0;
+    for (let y = minTileY; y <= maxTileY; y++) {
+      for (let x = minTileX; x <= maxTileX; x++) {
+        const sprite = this.spritePool[poolCursor];
+        const tileType = this.tileTypes[y][x];
+        const tileIndex = this.toTileIndex(y, x);
+        const nextTexture = this.resolveTextureForTileType(tileType);
+
+        sprite.visible = true;
+        sprite.x = x * this.tileSize;
+        sprite.y = y * this.tileSize;
+        if (sprite.texture !== nextTexture) {
+          sprite.texture = nextTexture;
+        }
+
+        this.poolAssignments[poolCursor] = tileIndex;
+        this.tileToPoolIndex.set(tileIndex, poolCursor);
+        poolCursor++;
+      }
+    }
+
+    for (let i = poolCursor; i < this.spritePool.length; i++) {
+      this.spritePool[i].visible = false;
+      this.poolAssignments[i] = null;
+    }
   }
 
   destroy(): void {
     this.container.removeChildren();
-    this.board = [];
+    this.tileTypes = [];
+    this.spritePool = [];
+    this.poolAssignments = [];
+    this.tileToPoolIndex.clear();
   }
 
   private async loadTextures(): Promise<void> {
-    const sheet = await Assets.load('/src/assets/spritesheet.json');
+    const sheet = await loadGameSpritesheet();
 
     const get = (name: string): Texture => {
       const texture = sheet.textures[name];
@@ -102,5 +171,43 @@ export default class BoardRenderer {
     }
 
     return this.textures.default;
+  }
+
+  private ensurePoolSize(requiredSprites: number): void {
+    if (requiredSprites <= this.spritePool.length) {
+      return;
+    }
+
+    const defaultTexture = this.textures.default;
+    if (!defaultTexture) {
+      throw new Error("Default texture is not loaded");
+    }
+
+    const missingSprites = requiredSprites - this.spritePool.length;
+    for (let i = 0; i < missingSprites; i++) {
+      const sprite = new Sprite(defaultTexture);
+      sprite.width = this.tileSize;
+      sprite.height = this.tileSize;
+      sprite.visible = false;
+      this.spritePool.push(sprite);
+      this.poolAssignments.push(null);
+      this.container.addChild(sprite);
+    }
+  }
+
+  private hideAllPoolSprites(): void {
+    this.tileToPoolIndex.clear();
+    for (let i = 0; i < this.spritePool.length; i++) {
+      this.spritePool[i].visible = false;
+      this.poolAssignments[i] = null;
+    }
+  }
+
+  private toTileIndex(y: number, x: number): number {
+    return y * this.cols + x;
+  }
+
+  private clampToRange(value: number, min: number, max: number): number {
+    return Math.min(max, Math.max(min, value));
   }
 }

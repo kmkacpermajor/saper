@@ -41,8 +41,8 @@ export default class ViewportController {
     const visibleWorldWidth = this.viewportWidth / this.zoom;
     const visibleWorldHeight = this.viewportHeight / this.zoom;
 
-    this.cameraX = (this.worldWidth - visibleWorldWidth) / 2;
-    this.cameraY = (this.worldHeight - visibleWorldHeight) / 2;
+    this.cameraX = this.worldWidth <= visibleWorldWidth ? 0 : (this.worldWidth - visibleWorldWidth) / 2;
+    this.cameraY = this.worldHeight <= visibleWorldHeight ? 0 : (this.worldHeight - visibleWorldHeight) / 2;
     this.clampCamera();
   }
 
@@ -50,8 +50,8 @@ export default class ViewportController {
     const visibleWorldWidth = this.viewportWidth / this.zoom;
     const visibleWorldHeight = this.viewportHeight / this.zoom;
 
-    this.cameraX = (this.worldWidth - visibleWorldWidth) / 2;
-    this.cameraY = (this.worldHeight - visibleWorldHeight) / 2;
+    this.cameraX = this.worldWidth <= visibleWorldWidth ? 0 : (this.worldWidth - visibleWorldWidth) / 2;
+    this.cameraY = this.worldHeight <= visibleWorldHeight ? 0 : (this.worldHeight - visibleWorldHeight) / 2;
     this.clampCamera();
   }
 
@@ -67,12 +67,19 @@ export default class ViewportController {
       return;
     }
 
-    const worldBefore = this.screenToWorld(screenX, screenY);
+    const beforeOffset = this.resolveCenterOffset(this.zoom);
+    const worldBefore = {
+      x: this.cameraX + (screenX - beforeOffset.x) / this.zoom,
+      y: this.cameraY + (screenY - beforeOffset.y) / this.zoom
+    };
+
     this.zoom = targetZoom;
 
+    const afterOffset = this.resolveCenterOffset(this.zoom);
+
     // Keep the world point under the cursor stable while zooming.
-    this.cameraX = worldBefore.x - screenX / this.zoom;
-    this.cameraY = worldBefore.y - screenY / this.zoom;
+    this.cameraX = worldBefore.x - (screenX - afterOffset.x) / this.zoom;
+    this.cameraY = worldBefore.y - (screenY - afterOffset.y) / this.zoom;
     this.clampCamera();
   }
 
@@ -95,14 +102,31 @@ export default class ViewportController {
     return Math.min(this.maxZoom, Math.max(this.minZoom, value));
   }
 
+  private resolveCenterOffset(zoom: number): Point {
+    return {
+      x: Math.max(0, (this.viewportWidth - this.worldWidth * zoom) / 2),
+      y: Math.max(0, (this.viewportHeight - this.worldHeight * zoom) / 2)
+    };
+  }
+
   private clampCamera(): void {
     const visibleWorldWidth = this.viewportWidth / this.zoom;
     const visibleWorldHeight = this.viewportHeight / this.zoom;
 
-    const maxCameraX = Math.max(0, this.worldWidth - visibleWorldWidth);
-    const maxCameraY = Math.max(0, this.worldHeight - visibleWorldHeight);
+    const minCameraX =
+      this.worldWidth <= visibleWorldWidth ? -this.worldWidth / 2 : -visibleWorldWidth / 2;
+    const minCameraY =
+      this.worldHeight <= visibleWorldHeight ? -this.worldHeight / 2 : -visibleWorldHeight / 2;
+    const maxCameraX =
+      this.worldWidth <= visibleWorldWidth
+        ? this.worldWidth / 2
+        : this.worldWidth - visibleWorldWidth / 2;
+    const maxCameraY =
+      this.worldHeight <= visibleWorldHeight
+        ? this.worldHeight / 2
+        : this.worldHeight - visibleWorldHeight / 2;
 
-    this.cameraX = Math.min(maxCameraX, Math.max(0, this.cameraX));
-    this.cameraY = Math.min(maxCameraY, Math.max(0, this.cameraY));
+    this.cameraX = Math.min(maxCameraX, Math.max(minCameraX, this.cameraX));
+    this.cameraY = Math.min(maxCameraY, Math.max(minCameraY, this.cameraY));
   }
 }
