@@ -11,25 +11,30 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
- * @generated from protobuf message saper.ConnectRequest
+ * @generated from protobuf message saper.CreateGameRequest
  */
-export interface ConnectRequest {
+export interface CreateGameRequest {
+    /**
+     * @generated from protobuf field: uint32 rows = 1
+     */
+    rows: number;
+    /**
+     * @generated from protobuf field: uint32 cols = 2
+     */
+    cols: number;
+    /**
+     * @generated from protobuf field: uint32 num_bombs = 3
+     */
+    numBombs: number;
+}
+/**
+ * @generated from protobuf message saper.JoinGameRequest
+ */
+export interface JoinGameRequest {
     /**
      * @generated from protobuf field: uint32 requested_game_id = 1
      */
     requestedGameId: number;
-    /**
-     * @generated from protobuf field: uint32 rows = 2
-     */
-    rows: number;
-    /**
-     * @generated from protobuf field: uint32 cols = 3
-     */
-    cols: number;
-    /**
-     * @generated from protobuf field: uint32 num_bombs = 4
-     */
-    numBombs: number;
 }
 /**
  * @generated from protobuf message saper.TileCoordinates
@@ -87,27 +92,33 @@ export interface ClientMessage {
      * @generated from protobuf oneof: payload
      */
     payload: {
-        oneofKind: "connect";
+        oneofKind: "createGame";
         /**
-         * @generated from protobuf field: saper.ConnectRequest connect = 2
+         * @generated from protobuf field: saper.CreateGameRequest create_game = 2
          */
-        connect: ConnectRequest;
+        createGame: CreateGameRequest;
+    } | {
+        oneofKind: "joinGame";
+        /**
+         * @generated from protobuf field: saper.JoinGameRequest join_game = 3
+         */
+        joinGame: JoinGameRequest;
     } | {
         oneofKind: "revealTile";
         /**
-         * @generated from protobuf field: saper.RevealTileRequest reveal_tile = 3
+         * @generated from protobuf field: saper.RevealTileRequest reveal_tile = 4
          */
         revealTile: RevealTileRequest;
     } | {
         oneofKind: "flagTile";
         /**
-         * @generated from protobuf field: saper.FlagTileRequest flag_tile = 4
+         * @generated from protobuf field: saper.FlagTileRequest flag_tile = 5
          */
         flagTile: FlagTileRequest;
     } | {
         oneofKind: "reset";
         /**
-         * @generated from protobuf field: saper.ResetRequest reset = 5
+         * @generated from protobuf field: saper.ResetRequest reset = 6
          */
         reset: ResetRequest;
     } | {
@@ -304,40 +315,35 @@ export enum TileType {
     EIGHT = 11
 }
 // @generated message type with reflection information, may provide speed optimized methods
-class ConnectRequest$Type extends MessageType<ConnectRequest> {
+class CreateGameRequest$Type extends MessageType<CreateGameRequest> {
     constructor() {
-        super("saper.ConnectRequest", [
-            { no: 1, name: "requested_game_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 2, name: "rows", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 3, name: "cols", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 4, name: "num_bombs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+        super("saper.CreateGameRequest", [
+            { no: 1, name: "rows", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 2, name: "cols", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 3, name: "num_bombs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
-    create(value?: PartialMessage<ConnectRequest>): ConnectRequest {
+    create(value?: PartialMessage<CreateGameRequest>): CreateGameRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.requestedGameId = 0;
         message.rows = 0;
         message.cols = 0;
         message.numBombs = 0;
         if (value !== undefined)
-            reflectionMergePartial<ConnectRequest>(this, message, value);
+            reflectionMergePartial<CreateGameRequest>(this, message, value);
         return message;
     }
-    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: ConnectRequest): ConnectRequest {
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: CreateGameRequest): CreateGameRequest {
         let message = target ?? this.create(), end = reader.pos + length;
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* uint32 requested_game_id */ 1:
-                    message.requestedGameId = reader.uint32();
-                    break;
-                case /* uint32 rows */ 2:
+                case /* uint32 rows */ 1:
                     message.rows = reader.uint32();
                     break;
-                case /* uint32 cols */ 3:
+                case /* uint32 cols */ 2:
                     message.cols = reader.uint32();
                     break;
-                case /* uint32 num_bombs */ 4:
+                case /* uint32 num_bombs */ 3:
                     message.numBombs = reader.uint32();
                     break;
                 default:
@@ -351,19 +357,16 @@ class ConnectRequest$Type extends MessageType<ConnectRequest> {
         }
         return message;
     }
-    internalBinaryWrite(message: ConnectRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* uint32 requested_game_id = 1; */
-        if (message.requestedGameId !== 0)
-            writer.tag(1, WireType.Varint).uint32(message.requestedGameId);
-        /* uint32 rows = 2; */
+    internalBinaryWrite(message: CreateGameRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* uint32 rows = 1; */
         if (message.rows !== 0)
-            writer.tag(2, WireType.Varint).uint32(message.rows);
-        /* uint32 cols = 3; */
+            writer.tag(1, WireType.Varint).uint32(message.rows);
+        /* uint32 cols = 2; */
         if (message.cols !== 0)
-            writer.tag(3, WireType.Varint).uint32(message.cols);
-        /* uint32 num_bombs = 4; */
+            writer.tag(2, WireType.Varint).uint32(message.cols);
+        /* uint32 num_bombs = 3; */
         if (message.numBombs !== 0)
-            writer.tag(4, WireType.Varint).uint32(message.numBombs);
+            writer.tag(3, WireType.Varint).uint32(message.numBombs);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -371,9 +374,56 @@ class ConnectRequest$Type extends MessageType<ConnectRequest> {
     }
 }
 /**
- * @generated MessageType for protobuf message saper.ConnectRequest
+ * @generated MessageType for protobuf message saper.CreateGameRequest
  */
-export const ConnectRequest = new ConnectRequest$Type();
+export const CreateGameRequest = new CreateGameRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class JoinGameRequest$Type extends MessageType<JoinGameRequest> {
+    constructor() {
+        super("saper.JoinGameRequest", [
+            { no: 1, name: "requested_game_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<JoinGameRequest>): JoinGameRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.requestedGameId = 0;
+        if (value !== undefined)
+            reflectionMergePartial<JoinGameRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: JoinGameRequest): JoinGameRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* uint32 requested_game_id */ 1:
+                    message.requestedGameId = reader.uint32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: JoinGameRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* uint32 requested_game_id = 1; */
+        if (message.requestedGameId !== 0)
+            writer.tag(1, WireType.Varint).uint32(message.requestedGameId);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message saper.JoinGameRequest
+ */
+export const JoinGameRequest = new JoinGameRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class TileCoordinates$Type extends MessageType<TileCoordinates> {
     constructor() {
@@ -582,10 +632,11 @@ class ClientMessage$Type extends MessageType<ClientMessage> {
     constructor() {
         super("saper.ClientMessage", [
             { no: 1, name: "contract_version", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 2, name: "connect", kind: "message", oneof: "payload", T: () => ConnectRequest },
-            { no: 3, name: "reveal_tile", kind: "message", oneof: "payload", T: () => RevealTileRequest },
-            { no: 4, name: "flag_tile", kind: "message", oneof: "payload", T: () => FlagTileRequest },
-            { no: 5, name: "reset", kind: "message", oneof: "payload", T: () => ResetRequest }
+            { no: 2, name: "create_game", kind: "message", oneof: "payload", T: () => CreateGameRequest },
+            { no: 3, name: "join_game", kind: "message", oneof: "payload", T: () => JoinGameRequest },
+            { no: 4, name: "reveal_tile", kind: "message", oneof: "payload", T: () => RevealTileRequest },
+            { no: 5, name: "flag_tile", kind: "message", oneof: "payload", T: () => FlagTileRequest },
+            { no: 6, name: "reset", kind: "message", oneof: "payload", T: () => ResetRequest }
         ]);
     }
     create(value?: PartialMessage<ClientMessage>): ClientMessage {
@@ -604,25 +655,31 @@ class ClientMessage$Type extends MessageType<ClientMessage> {
                 case /* uint32 contract_version */ 1:
                     message.contractVersion = reader.uint32();
                     break;
-                case /* saper.ConnectRequest connect */ 2:
+                case /* saper.CreateGameRequest create_game */ 2:
                     message.payload = {
-                        oneofKind: "connect",
-                        connect: ConnectRequest.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).connect)
+                        oneofKind: "createGame",
+                        createGame: CreateGameRequest.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).createGame)
                     };
                     break;
-                case /* saper.RevealTileRequest reveal_tile */ 3:
+                case /* saper.JoinGameRequest join_game */ 3:
+                    message.payload = {
+                        oneofKind: "joinGame",
+                        joinGame: JoinGameRequest.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).joinGame)
+                    };
+                    break;
+                case /* saper.RevealTileRequest reveal_tile */ 4:
                     message.payload = {
                         oneofKind: "revealTile",
                         revealTile: RevealTileRequest.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).revealTile)
                     };
                     break;
-                case /* saper.FlagTileRequest flag_tile */ 4:
+                case /* saper.FlagTileRequest flag_tile */ 5:
                     message.payload = {
                         oneofKind: "flagTile",
                         flagTile: FlagTileRequest.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).flagTile)
                     };
                     break;
-                case /* saper.ResetRequest reset */ 5:
+                case /* saper.ResetRequest reset */ 6:
                     message.payload = {
                         oneofKind: "reset",
                         reset: ResetRequest.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).reset)
@@ -643,18 +700,21 @@ class ClientMessage$Type extends MessageType<ClientMessage> {
         /* uint32 contract_version = 1; */
         if (message.contractVersion !== 0)
             writer.tag(1, WireType.Varint).uint32(message.contractVersion);
-        /* saper.ConnectRequest connect = 2; */
-        if (message.payload.oneofKind === "connect")
-            ConnectRequest.internalBinaryWrite(message.payload.connect, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
-        /* saper.RevealTileRequest reveal_tile = 3; */
+        /* saper.CreateGameRequest create_game = 2; */
+        if (message.payload.oneofKind === "createGame")
+            CreateGameRequest.internalBinaryWrite(message.payload.createGame, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        /* saper.JoinGameRequest join_game = 3; */
+        if (message.payload.oneofKind === "joinGame")
+            JoinGameRequest.internalBinaryWrite(message.payload.joinGame, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
+        /* saper.RevealTileRequest reveal_tile = 4; */
         if (message.payload.oneofKind === "revealTile")
-            RevealTileRequest.internalBinaryWrite(message.payload.revealTile, writer.tag(3, WireType.LengthDelimited).fork(), options).join();
-        /* saper.FlagTileRequest flag_tile = 4; */
+            RevealTileRequest.internalBinaryWrite(message.payload.revealTile, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
+        /* saper.FlagTileRequest flag_tile = 5; */
         if (message.payload.oneofKind === "flagTile")
-            FlagTileRequest.internalBinaryWrite(message.payload.flagTile, writer.tag(4, WireType.LengthDelimited).fork(), options).join();
-        /* saper.ResetRequest reset = 5; */
+            FlagTileRequest.internalBinaryWrite(message.payload.flagTile, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+        /* saper.ResetRequest reset = 6; */
         if (message.payload.oneofKind === "reset")
-            ResetRequest.internalBinaryWrite(message.payload.reset, writer.tag(5, WireType.LengthDelimited).fork(), options).join();
+            ResetRequest.internalBinaryWrite(message.payload.reset, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

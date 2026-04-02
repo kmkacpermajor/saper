@@ -2,6 +2,8 @@ import { GameState, TileType, type TileCoordinates, type TileUpdate } from "@sap
 import Board from "./Board.js";
 import MessageSender from "./MessageSender.js";
 
+const MAX_ZERO_START_RETRIES = 8;
+
 export default class Game {
   readonly gameId: number;
   readonly rows: number;
@@ -55,10 +57,15 @@ export default class Game {
     }
 
     this.board = new Board(this.rows, this.cols, this.numBombs);
+    // Prefer a zero-adjacent first tile, but cap retries to prevent stalls on large boards.
     let retries = 0;
-    while (retries < 20 && this.board.board[y][x].adjacentMines !== 0) {
+    while (retries < MAX_ZERO_START_RETRIES && this.board.board[y][x].adjacentMines !== 0) {
       this.board = new Board(this.rows, this.cols, this.numBombs);
       retries++;
+    }
+
+    while (this.board.board[y][x].isMine) {
+      this.board = new Board(this.rows, this.cols, this.numBombs);
     }
   }
 
@@ -89,7 +96,9 @@ export default class Game {
         continue;
       }
 
-      combinedTilesToReveal.push(...tilesToReveal);
+      for (const tileToReveal of tilesToReveal) {
+        combinedTilesToReveal.push(tileToReveal);
+      }
     }
 
     if (combinedTilesToReveal.length === 0) {

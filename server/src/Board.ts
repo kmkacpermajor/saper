@@ -113,15 +113,16 @@ export default class Board {
     }
 
     const tilesToReveal: TileUpdate[] = [];
-    const queue: Array<{ y: number; x: number }> = [{ y, x }];
+    const queueY: number[] = [y];
+    const queueX: number[] = [x];
+    const enqueued = new Uint8Array(this.rows * this.cols);
+    enqueued[y * this.cols + x] = 1;
+    let head = 0;
 
-    while (queue.length > 0) {
-      const tileCoords = queue.shift();
-      if (!tileCoords) {
-        continue;
-      }
-      const cy = tileCoords.y;
-      const cx = tileCoords.x;
+    while (head < queueY.length) {
+      const cy = queueY[head];
+      const cx = queueX[head];
+      head++;
 
       if (cy < 0 || cy >= this.rows || cx < 0 || cx >= this.cols || this.board[cy][cx].isRevealed || this.board[cy][cx].isFlagged) {
         continue;
@@ -134,7 +135,25 @@ export default class Board {
         for (let dy = -1; dy <= 1; dy++) {
           for (let dx = -1; dx <= 1; dx++) {
             if (dx !== 0 || dy !== 0) {
-              queue.push({ y: cy + dy, x: cx + dx });
+              const ny = cy + dy;
+              const nx = cx + dx;
+
+              if (ny < 0 || ny >= this.rows || nx < 0 || nx >= this.cols) {
+                continue;
+              }
+
+              if (this.board[ny][nx].isRevealed || this.board[ny][nx].isFlagged) {
+                continue;
+              }
+
+              const nextIndex = ny * this.cols + nx;
+              if (enqueued[nextIndex] === 1) {
+                continue;
+              }
+
+              enqueued[nextIndex] = 1;
+              queueY.push(ny);
+              queueX.push(nx);
             }
           }
         }

@@ -1,33 +1,17 @@
 import {
-  NEW_GAME_ID,
   decodeServerMessage,
   type TileCoordinates,
   type ServerMessage
 } from "@saper/contracts";
+import type { CreateGameRequest, JoinGameRequest } from "../../../shared/contracts/src/generated/game.js";
 import log from "@/services/logger";
 import {
-  createConnectPayload,
+  createGamePayload,
   createFlagTilePayload,
+  joinGamePayload,
   createResetPayload,
   createRevealTilePayload
 } from "@/services/wsProtocol";
-
-export type ConnectParams = {
-  boardHeight: number;
-  boardWidth: number;
-  gameId: string;
-  numBombs: number;
-  connectionType: "create" | "join";
-  onServerMessage: (message: ServerMessage) => void;
-};
-
-export type TransportClient = {
-  connect(params: ConnectParams): Promise<void>;
-  disconnect(): void;
-  revealTiles(tiles: TileCoordinates[]): void;
-  flagTile(tile: TileCoordinates, unflag: boolean): void;
-  sendReset(): void;
-};
 
 const DEV_WS_URL = "ws://localhost:8085";
 
@@ -51,24 +35,29 @@ const waitForOpenSocket = async (socket: WebSocket): Promise<void> => {
   });
 };
 
-class WsClient implements TransportClient {
+class WsClient {
   private socket: WebSocket | undefined;
   private onServerMessage: ((message: ServerMessage) => void) | undefined;
 
-  async connect(params: ConnectParams): Promise<void> {
+  async createGame(request: CreateGameRequest, onServerMessage: (message: ServerMessage) => void): Promise<void> {
+    await this.connectSocket(onServerMessage);
+    this.send(createGamePayload(request));
+  }
+
+  async joinGame(request: JoinGameRequest, onServerMessage: (message: ServerMessage) => void): Promise<void> {
+    await this.connectSocket(onServerMessage);
+    this.send(joinGamePayload(request));
+  }
+
+  private async connectSocket(onServerMessage: (message: ServerMessage) => void): Promise<void> {
     this.disconnect();
 
-    const resolvedGameId =
-      params.connectionType === "join" ? Number(params.gameId) : NEW_GAME_ID;
-
     this.socket = new WebSocket(resolveWebSocketUrl());
-    this.onServerMessage = params.onServerMessage;
+    this.onServerMessage = onServerMessage;
     await waitForOpenSocket(this.socket);
 
     this.socket.binaryType = "arraybuffer";
     this.setupSocketHandlers();
-
-    this.send(createConnectPayload(resolvedGameId, params.boardHeight, params.boardWidth, params.numBombs));
   }
 
   disconnect(): void {
@@ -128,4 +117,5 @@ class WsClient implements TransportClient {
   }
 }
 
+export { WsClient };
 export const wsClient = new WsClient();

@@ -1,6 +1,5 @@
-import { Application, Container, Sprite, Texture } from "pixi.js";
-import { TileType } from "@saper/contracts";
-import { loadGameSpritesheet } from "./gameAssets";
+import { Application, Assets, Container, Sprite, Texture } from "pixi.js";
+import { TileUpdate ,TileType } from "@saper/contracts";
 
 type TileTextures = {
   default: Texture | null;
@@ -9,7 +8,6 @@ type TileTextures = {
   numbers: Texture[];
 };
 
-type RenderTileUpdate = { y: number; x: number; type: TileType };
 type VisibleWorld = { x: number; y: number; width: number; height: number };
 
 export default class BoardRenderer {
@@ -47,13 +45,14 @@ export default class BoardRenderer {
       Array.from({ length: this.cols }, () => TileType.HIDDEN)
     );
 
+    this.hideAllPoolSprites();
     this.tileToPoolIndex.clear();
     for (let i = 0; i < this.poolAssignments.length; i++) {
       this.poolAssignments[i] = null;
     }
   }
 
-  renderTiles(tiles: ReadonlyArray<RenderTileUpdate>): void {
+  renderTiles(tiles: ReadonlyArray<TileUpdate>): void {
     for (const tile of tiles) {
       if (this.tileTypes[tile.y]?.[tile.x] === undefined) {
         continue;
@@ -66,11 +65,7 @@ export default class BoardRenderer {
         continue;
       }
 
-      const sprite = this.spritePool[poolIndex];
-      const nextTexture = this.resolveTextureForTileType(tile.type);
-      if (sprite.texture !== nextTexture) {
-        sprite.texture = nextTexture;
-      }
+      this.spritePool[poolIndex].texture = this.resolveTextureForTileType(tile.type);
     }
   }
 
@@ -107,14 +102,11 @@ export default class BoardRenderer {
         const sprite = this.spritePool[poolCursor];
         const tileType = this.tileTypes[y][x];
         const tileIndex = this.toTileIndex(y, x);
-        const nextTexture = this.resolveTextureForTileType(tileType);
 
         sprite.visible = true;
         sprite.x = x * this.tileSize;
         sprite.y = y * this.tileSize;
-        if (sprite.texture !== nextTexture) {
-          sprite.texture = nextTexture;
-        }
+        sprite.texture = this.resolveTextureForTileType(tileType);
 
         this.poolAssignments[poolCursor] = tileIndex;
         this.tileToPoolIndex.set(tileIndex, poolCursor);
@@ -129,6 +121,7 @@ export default class BoardRenderer {
   }
 
   destroy(): void {
+    this.container.removeFromParent();
     this.container.removeChildren();
     this.tileTypes = [];
     this.spritePool = [];
@@ -137,7 +130,7 @@ export default class BoardRenderer {
   }
 
   private async loadTextures(): Promise<void> {
-    const sheet = await loadGameSpritesheet();
+    const sheet = await Assets.load("/src/assets/spritesheet.json");
 
     const get = (name: string): Texture => {
       const texture = sheet.textures[name];

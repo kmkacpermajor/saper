@@ -6,6 +6,7 @@ import {
 } from "./generated/game.js";
 
 export * from "./generated/game.js";
+export type { CreateGameRequest, JoinGameRequest } from "./generated/game.js";
 
 export const CONTRACT_VERSION = 1;
 export const NEW_GAME_ID = 0xff;
@@ -15,7 +16,6 @@ const createClientMessage = (
 ): ClientMessageModel =>
 	ClientMessageType.create({
 		contractVersion: message.contractVersion ?? CONTRACT_VERSION,
-		payload: { oneofKind: undefined },
 		...message
 	});
 
@@ -24,7 +24,6 @@ const createServerMessage = (
 ): ServerMessageModel =>
 	ServerMessageType.create({
 		contractVersion: message.contractVersion ?? CONTRACT_VERSION,
-		payload: { oneofKind: undefined },
 		...message
 	});
 

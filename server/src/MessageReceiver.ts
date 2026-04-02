@@ -1,4 +1,4 @@
-import { CONTRACT_VERSION, GameState, NEW_GAME_ID, decodeClientMessage, encodeServerMessage } from "@saper/contracts";
+import { CONTRACT_VERSION, GameState, decodeClientMessage, encodeServerMessage } from "@saper/contracts";
 import type { RawData, WebSocket } from "ws";
 import type Game from "./Game.js";
 import type GameSessionManager from "./GameSessionManager.js";
@@ -65,19 +65,36 @@ export default class MessageReceiver {
       return;
     }
 
-    if (!this.currentGame && decodedMessage.payload.oneofKind !== "connect") {
-      logger.warn("[server] Non-connect message received before handshake. Closing socket.");
+    if (
+      !this.currentGame &&
+      decodedMessage.payload.oneofKind !== "createGame" &&
+      decodedMessage.payload.oneofKind !== "joinGame"
+    ) {
+      const payloadKind = decodedMessage.payload.oneofKind ?? "unknown";
+      logger.warn(
+        `[server] Non-handshake message (${payloadKind}) received before session attach. Closing socket.`
+      );
+      this.sendProtocolError(
+        "HANDSHAKE_REQUIRED",
+        "First client message must be createGame or joinGame."
+      );
       this.ws.close();
       return;
     }
 
     switch (decodedMessage.payload.oneofKind) {
-      case "connect": {
-        const connectPayload = decodedMessage.payload.connect;
+      case "createGame": {
+        const createPayload = decodedMessage.payload.createGame;
         logger.debug(
-          `[server] Connect request: gameId=${connectPayload.requestedGameId}, rows=${connectPayload.rows}, cols=${connectPayload.cols}, bombs=${connectPayload.numBombs}`
+          `[server] Create game request: rows=${createPayload.rows}, cols=${createPayload.cols}, bombs=${createPayload.numBombs}`
         );
-        this.handleConnect(connectPayload.requestedGameId, connectPayload.rows, connectPayload.cols, connectPayload.numBombs);
+        this.handleCreateGame(createPayload.rows, createPayload.cols, createPayload.numBombs);
+        return;
+      }
+      case "joinGame": {
+        const joinPayload = decodedMessage.payload.joinGame;
+        logger.debug(`[server] Join game request: gameId=${joinPayload.requestedGameId}`);
+        this.handleJoinGame(joinPayload.requestedGameId);
         return;
       }
       case "revealTile": {
@@ -127,23 +144,24 @@ export default class MessageReceiver {
     }
   }
 
-  private handleConnect(requestedGameId: number, rows: number, cols: number, numBombs: number): void {
-    let attachError: string | null = null;
+  private handleCreateGame(rows: number, cols: number, numBombs: number): void {
+    const result = this.gameSessionManager.createNewGame(rows, cols, numBombs);
+    this.attachGame(result.game, result.error);
+  }
 
-    if (requestedGameId === NEW_GAME_ID) {
-      const result = this.gameSessionManager.createNewGame(rows, cols, numBombs);
-      this.currentGame = result.game;
-      attachError = result.error;
-    } else {
-      const result = this.gameSessionManager.getGame(requestedGameId);
-      this.currentGame = result.game;
-      attachError = result.error;
-    }
+  private handleJoinGame(requestedGameId: number): void {
+    const result = this.gameSessionManager.getGame(requestedGameId);
+    this.attachGame(result.game, result.error);
+  }
+
+  private attachGame(game: Game | null, error: string | null): void {
+    this.currentGame = game;
 
     if (!this.currentGame) {
-      const reason = attachError ?? "Could not attach client to game session.";
+      const reason = error ?? "Could not attach client to game session.";
       logger.warn(`[server] Could not attach client to game session: ${reason}`);
       this.sendProtocolError("GAME_ATTACH_FAILED", reason);
+      this.ws.close();
       return;
     }
 
@@ -157,6 +175,7 @@ export default class MessageReceiver {
       if (shownTiles.length > 0) {
         this.currentGame.messageSender.sendRevealTiles(shownTiles, this.ws);
       }
+
       if (this.currentGame.gameEnded) {
         this.currentGame.messageSender.sendGameOver(this.currentGame.gameWon ? GameState.WON : GameState.LOST);
       }

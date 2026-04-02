@@ -12,6 +12,7 @@ services:
       HOST: 0.0.0.0
       PORT: 8085
       LOG_LEVEL: ${SERVER_LOG_LEVEL:-info}
+      GAME_PARK_TTL_MS: ${GAME_PARK_TTL_MS:-300000}
     ports:
       - "8085:8085"
 

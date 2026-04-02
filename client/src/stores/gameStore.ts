@@ -1,9 +1,10 @@
 import { computed, nextTick, ref } from "vue";
 import { defineStore } from "pinia";
-import { GameState } from "@saper/contracts";
+import { GameState, NEW_GAME_ID } from "@saper/contracts";
 import { GAME_EVENT_TYPE, type GameEvent as GameUpdateEvent } from "@/game/gameEvents";
-import GameSession from "@/game/gameSession";
+import GameController from "@/game/gameController";
 import log from "@/services/logger";
+import { getSharedPixiApplication } from "@/services/pixiWarmup";
 import { wsClient } from "@/services/wsClient";
 
 export const useGameStore = defineStore("game", () => {
@@ -21,7 +22,7 @@ export const useGameStore = defineStore("game", () => {
 
   const currentGameState = ref(GameState.IN_PROGRESS);
   const currentNumBombs = ref(0);
-  let gameSession: GameSession | null = null;
+  let gameController: GameController | null = null;
 
   const maxBombs = computed(() => Math.floor(boardWidth.value * boardHeight.value * 0.35));
 
@@ -39,6 +40,8 @@ export const useGameStore = defineStore("game", () => {
   const resetSessionState = (): void => {
     currentGameId.value = "";
     gameRunning.value = false;
+    connectionType.value = "create";
+    gameId.value = "";
     resetRuntimeState();
   };
 
@@ -58,13 +61,14 @@ export const useGameStore = defineStore("game", () => {
     }
   };
 
-  const destroyGameSession = (): void => {
-    if (!gameSession) {
+  const destroyGameController = (): void => {
+    if (!gameController) {
       return;
     }
 
-    gameSession.stop();
-    gameSession = null;
+    gameController.cleanup();
+    gameController = null;
+    wsClient.disconnect();
   };
 
   const connect = async (): Promise<void> => {
@@ -80,21 +84,73 @@ export const useGameStore = defineStore("game", () => {
         throw new Error("Please enter a Game ID");
       }
 
-      if (numBombs.value > maxBombs.value) {
-        throw new Error("Too much");
+      destroyGameController();
+
+      const resolvedGameId =
+        connectionType.value === "join" ? Number(gameId.value) : NEW_GAME_ID;
+      const app = await getSharedPixiApplication();
+      app.start();
+
+      let readyResolved = false;
+      let resolveReady!: () => void;
+      let rejectReady!: (reason?: unknown) => void;
+      const readyPromise = new Promise<void>((resolve, reject) => {
+        resolveReady = resolve;
+        rejectReady = reject;
+      });
+
+      const settleReady = (settler: (() => void) | ((reason?: unknown) => void), reason?: unknown): void => {
+        if (readyResolved) {
+          return;
+        }
+
+        readyResolved = true;
+        if (reason === undefined) {
+          (settler as () => void)();
+          return;
+        }
+
+        (settler as (reason?: unknown) => void)(reason);
+      };
+
+      const readyTimeoutId = window.setTimeout(() => {
+        settleReady(rejectReady, new Error("Server did not confirm game setup in time."));
+      }, 8000);
+
+      const controller = new GameController(resolvedGameId, applyGameUpdateEvent, wsClient, app, {
+        onConnected: () => {
+          window.clearTimeout(readyTimeoutId);
+          settleReady(resolveReady);
+        },
+        onProtocolError: (code: string, message: string) => {
+          window.clearTimeout(readyTimeoutId);
+          settleReady(rejectReady, new Error(`${message}`));
+        }
+      });
+      await controller.init();
+      gameController = controller;
+
+      if (connectionType.value === "join") {
+        await wsClient.joinGame(
+          {
+            requestedGameId: Number(gameId.value)
+          },
+          controller.handleReceivedServerMessage
+        );
+      } else {
+        await wsClient.createGame(
+          {
+            rows: boardHeight.value,
+            cols: boardWidth.value,
+            numBombs: numBombs.value
+          },
+          controller.handleReceivedServerMessage
+        );
       }
 
-      destroyGameSession();
+      await readyPromise;
 
-      const session = new GameSession(wsClient, applyGameUpdateEvent);
-      const canvas = await session.start({
-        boardHeight: boardHeight.value,
-        boardWidth: boardWidth.value,
-        gameId: gameId.value,
-        numBombs: numBombs.value,
-        connectionType: connectionType.value
-      });
-      gameSession = session;
+      const canvas = controller.app.canvas;
 
       gameRunning.value = true;
       await nextTick();
@@ -106,9 +162,9 @@ export const useGameStore = defineStore("game", () => {
         gameCanvasContainer.value.appendChild(canvas);
       }
 
-      gameSession.fitViewport();
+      gameController.fitViewport();
     } catch (err: unknown) {
-      destroyGameSession();
+      destroyGameController();
 
       const message = err instanceof Error ? err.message : "Unknown error";
       error.value = `Connection failed: ${message}`;
@@ -119,28 +175,32 @@ export const useGameStore = defineStore("game", () => {
   };
 
   const disconnect = (): void => {
-    destroyGameSession();
+    destroyGameController();
     resetSessionState();
   };
 
   const resetGame = (): void => {
-    gameSession?.reset();
+    if (!gameController) {
+      return;
+    }
+
+    wsClient.sendReset();
   };
 
   const zoomIn = (): void => {
-    gameSession?.zoomIn();
+    gameController?.zoomViewportAtCanvasCenter(1.12);
   };
 
   const zoomOut = (): void => {
-    gameSession?.zoomOut();
+    gameController?.zoomViewportAtCanvasCenter(0.88);
   };
 
   const fitViewport = (): void => {
-    gameSession?.fitViewport();
+    gameController?.fitViewport();
   };
 
   const centerViewport = (): void => {
-    gameSession?.centerViewport();
+    gameController?.centerViewport();
   };
 
   return {

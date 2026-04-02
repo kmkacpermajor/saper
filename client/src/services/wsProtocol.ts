@@ -3,23 +3,23 @@ import {
   encodeClientMessage,
   type TileCoordinates
 } from "@saper/contracts";
+import type { CreateGameRequest, JoinGameRequest } from "../../../shared/contracts/src/generated/game.js";
 
-export const createConnectPayload = (
-  gameId: number,
-  rows: number,
-  cols: number,
-  numBombs: number
-): Uint8Array =>
+export const createGamePayload = (createGame: CreateGameRequest): Uint8Array =>
   encodeClientMessage({
     contractVersion: CONTRACT_VERSION,
     payload: {
-      oneofKind: "connect",
-      connect: {
-        requestedGameId: gameId,
-        rows,
-        cols,
-        numBombs
-      }
+      oneofKind: "createGame",
+      createGame
+    }
+  });
+
+export const joinGamePayload = (joinGame: JoinGameRequest): Uint8Array =>
+  encodeClientMessage({
+    contractVersion: CONTRACT_VERSION,
+    payload: {
+      oneofKind: "joinGame",
+      joinGame
     }
   });
 

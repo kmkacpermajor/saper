@@ -23,11 +23,14 @@ enum TileType {
   TILE_TYPE_EIGHT = 11;
 }
 
-message ConnectRequest {
+message CreateGameRequest {
+  uint32 rows = 1;
+  uint32 cols = 2;
+  uint32 num_bombs = 3;
+}
+
+message JoinGameRequest {
   uint32 requested_game_id = 1;
-  uint32 rows = 2;
-  uint32 cols = 3;
-  uint32 num_bombs = 4;
 }
 
 message TileCoordinates {
@@ -50,10 +53,11 @@ message ResetRequest {}
 message ClientMessage {
   uint32 contract_version = 1;
   oneof payload {
-    ConnectRequest connect = 2;
-    RevealTileRequest reveal_tile = 3;
-    FlagTileRequest flag_tile = 4;
-    ResetRequest reset = 5;
+    CreateGameRequest create_game = 2;
+    JoinGameRequest join_game = 3;
+    RevealTileRequest reveal_tile = 4;
+    FlagTileRequest flag_tile = 5;
+    ResetRequest reset = 6;
   }
 }
 

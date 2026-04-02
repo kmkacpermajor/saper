@@ -1,15 +1,18 @@
 import { Application } from "pixi.js";
-import { GameState, TileType, type TileCoordinates } from "@saper/contracts";
+import { TileUpdate ,GameState, TileType, type ServerMessage, type TileCoordinates } from "@saper/contracts";
 import log, { clientLogLevel } from "@/services/logger";
 import BoardRenderer from "./boardRenderer";
 import { GAME_EVENT_TYPE, type GameEvent } from "./gameEvents";
-import type { TransportClient } from "@/services/wsClient";
+import type { WsClient } from "@/services/wsClient";
 import MouseInputHandler from "./input/MouseInputHandler";
 import TouchInputHandler from "./input/TouchInputHandler";
 import ViewportController from "./viewportController";
 
-type EventHandler = (event: GameEvent) => void;
-type RevealTileUpdate = { y: number; x: number; type: TileType };
+type GameEventHandler = (event: GameEvent) => void;
+type GameControllerLifecycleHandlers = {
+  onConnected?: () => void;
+  onProtocolError?: (code: string, message: string) => void;
+};
 
 export default class GameController {
   private readonly tileSize = 32;
@@ -19,24 +22,32 @@ export default class GameController {
   private _gameId: number;
   private _gameState: GameState;
   private _numBombs: number;
-  private readonly eventHandler: EventHandler;
+  private readonly gameEventHandler: GameEventHandler;
   private readonly boardRenderer: BoardRenderer;
-  private readonly transportClient: TransportClient;
+  private readonly wsClient: WsClient;
   private readonly mouseInputHandler: MouseInputHandler;
   private readonly touchInputHandler: TouchInputHandler;
   private readonly viewportController: ViewportController;
+  private readonly lifecycleHandlers: GameControllerLifecycleHandlers;
   private initialized: boolean;
 
   rows: number;
   cols: number;
   initialNumBombs: number;
-  app!: Application;
+  readonly app: Application;
 
-  constructor(gameId: number, eventHandler: EventHandler, transportClient: TransportClient) {
+  constructor(
+    gameId: number,
+    gameEventHandler: GameEventHandler,
+    wsClient: WsClient,
+    app: Application,
+    lifecycleHandlers: GameControllerLifecycleHandlers = {}
+  ) {
     this._gameId = gameId;
-    this.eventHandler = eventHandler;
+    this.gameEventHandler = gameEventHandler;
+    this.app = app;
     this.boardRenderer = new BoardRenderer(this.tileSize);
-    this.transportClient = transportClient;
+    this.wsClient = wsClient;
     this._gameState = GameState.IN_PROGRESS;
     this._numBombs = 0;
     this.initialNumBombs = 0;
@@ -45,6 +56,7 @@ export default class GameController {
     this.mouseInputHandler = new MouseInputHandler(this);
     this.touchInputHandler = new TouchInputHandler(this);
     this.viewportController = new ViewportController();
+    this.lifecycleHandlers = lifecycleHandlers;
 
     this.initialized = false;
 
@@ -83,7 +95,7 @@ export default class GameController {
     payload: Extract<GameEvent, { type: T }>["payload"]
   ): void {
     setTimeout(() => {
-      this.eventHandler({ type, payload } as GameEvent);
+      this.gameEventHandler({ type, payload } as GameEvent);
     }, 0);
   }
 
@@ -91,15 +103,6 @@ export default class GameController {
     if (this.initialized) {
       return;
     }
-
-    this.app = new Application();
-    await this.app.init({
-      width: 0,
-      height: 0,
-      backgroundColor: 0x000000,
-      backgroundAlpha: 0,
-      preference: 'webgpu',
-    });
 
     await this.boardRenderer.init(this.app);
     this.boardRenderer.container.eventMode = "static";
@@ -114,6 +117,56 @@ export default class GameController {
     window.addEventListener("resize", this.handleWindowResize);
     this.initialized = true;
   }
+
+  handleReceivedServerMessage = (message: ServerMessage): void => {
+    switch (message.payload.oneofKind) {
+      case "connect": {
+        const payload = message.payload.connect;
+        this.applyConnected(payload.gameId, payload.rows, payload.cols, payload.numBombs);
+        this.lifecycleHandlers.onConnected?.();
+        return;
+      }
+
+      case "revealTiles": {
+        const revealUpdates: Array<{ y: number; x: number; type: TileType }> = [];
+
+        for (const tile of message.payload.revealTiles.tiles) {
+          if (!this.isTileType(tile.type)) {
+            continue;
+          }
+
+          if (tile.y >= this.rows || tile.x >= this.cols) {
+            continue;
+          }
+
+          revealUpdates.push({ y: tile.y, x: tile.x, type: tile.type });
+        }
+
+        this.applyRevealTiles(revealUpdates);
+        return;
+      }
+
+      case "gameOver": {
+        this.applyGameOver(message.payload.gameOver.state as GameState);
+        return;
+      }
+
+      case "reset": {
+        this.applyReset();
+        return;
+      }
+
+      case "error": {
+        const errorPayload = message.payload.error;
+        log.error(`[client] Server error: ${errorPayload.code} ${errorPayload.message}`);
+        this.lifecycleHandlers.onProtocolError?.(errorPayload.code, errorPayload.message);
+        return;
+      }
+
+      default:
+        log.warn("[client] Received server message with unsupported payload kind.");
+    }
+  };
 
   applyConnected(gameId: number, rows: number, cols: number, bombs: number): void {
     this.gameId = gameId;
@@ -135,13 +188,13 @@ export default class GameController {
     }, 0);
   }
 
-  applyRevealTiles(tiles: ReadonlyArray<RevealTileUpdate>): void {
+  applyRevealTiles(tiles: ReadonlyArray<TileUpdate>): void {
     if (tiles.length === 0) {
       return;
     }
 
     let numBombsDelta = 0;
-    const tilesToRender: RevealTileUpdate[] = [];
+    const tilesToRender: TileUpdate[] = [];
 
     for (const tile of tiles) {
       const previousType = this.boardState[tile.y]?.[tile.x];
@@ -149,16 +202,14 @@ export default class GameController {
         continue;
       }
 
-      if (previousType === tile.type) {
-        continue;
-      }
+      if (previousType !== tile.type) {
+        this.boardState[tile.y][tile.x] = tile.type;
 
-      this.boardState[tile.y][tile.x] = tile.type;
-
-      if (previousType !== TileType.FLAGGED && tile.type === TileType.FLAGGED) {
-        numBombsDelta--;
-      } else if (previousType === TileType.FLAGGED && tile.type !== TileType.FLAGGED) {
-        numBombsDelta++;
+        if (previousType !== TileType.FLAGGED && tile.type === TileType.FLAGGED) {
+          numBombsDelta--;
+        } else if (previousType === TileType.FLAGGED && tile.type !== TileType.FLAGGED) {
+          numBombsDelta++;
+        }
       }
 
       tilesToRender.push(tile);
@@ -199,7 +250,7 @@ export default class GameController {
   }
 
   revealTile(tile: TileCoordinates): void {
-    this.transportClient.revealTiles([tile]);
+    this.wsClient.revealTiles([tile]);
   }
 
   toggleFlag(tile: TileCoordinates): void {
@@ -208,7 +259,7 @@ export default class GameController {
       return;
     }
 
-    this.transportClient.flagTile(tile, tileType === TileType.FLAGGED);
+    this.wsClient.flagTile(tile, tileType === TileType.FLAGGED);
   }
 
   tryChordReveal(centerTile: TileCoordinates): boolean {
@@ -238,7 +289,7 @@ export default class GameController {
         tile: centerTile,
         hiddenNeighborsCount: hiddenNeighbors.length
       });
-      this.transportClient.revealTiles(hiddenNeighbors);
+      this.wsClient.revealTiles(hiddenNeighbors);
       return true;
     }
 
@@ -271,7 +322,7 @@ export default class GameController {
       return;
     }
 
-    const tilesToRender: RevealTileUpdate[] = [];
+    const tilesToRender: TileUpdate[] = [];
     for (const tile of this.chordPreviewTiles) {
       const currentType = this.boardState[tile.y]?.[tile.x];
       if (currentType === undefined) {
@@ -518,6 +569,10 @@ export default class GameController {
     return Array.from({ length: rows }, () => Array.from({ length: cols }, () => TileType.HIDDEN));
   }
 
+  private isTileType(value: number): value is TileType {
+    return Number.isInteger(value) && value >= TileType.HIDDEN && value <= TileType.EIGHT;
+  }
+
   cleanup(): void {
     log.info("[client] Cleaning up game instance.");
     this.app.canvas.removeEventListener("mousedown", this.mouseInputHandler.handleCanvasMouseDown);
@@ -533,7 +588,8 @@ export default class GameController {
     this.touchInputHandler.reset();
     this.app.ticker.stop();
     this.boardRenderer.destroy();
-    this.app.stage.destroy({ children: true });
+    this.app.stage.removeChildren();
+    this.app.renderer.render({ container: this.app.stage });
     this.initialized = false;
   }
 }
