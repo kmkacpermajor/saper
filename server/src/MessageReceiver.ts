@@ -23,13 +23,31 @@ const toUint8Array = (message: RawData): Uint8Array => {
 
 export default class MessageReceiver {
   private currentGame: Game | null;
+  private currentPlayerId: number | null;
   private readonly gameSessionManager: GameSessionManager;
   private readonly ws: WebSocket;
 
   constructor(gameSessionManager: GameSessionManager, ws: WebSocket) {
     this.currentGame = null;
+    this.currentPlayerId = null;
     this.gameSessionManager = gameSessionManager;
     this.ws = ws;
+
+    this.ws.on("close", () => {
+      if (!this.currentGame) {
+        return;
+      }
+
+      const removedPlayerId = this.currentGame.removePlayer(this.ws);
+      if (removedPlayerId !== null) {
+        this.currentGame.messageSender.sendPlayerCursorRemove(removedPlayerId);
+      }
+      logger.debug(
+        `[server] Detached player ${removedPlayerId ?? "unknown"} from game ${this.currentGame.gameId}.`
+      );
+      this.currentGame = null;
+      this.currentPlayerId = null;
+    });
   }
 
   private sendProtocolError(code: string, message: string): void {
@@ -136,6 +154,35 @@ export default class MessageReceiver {
         }
         return;
       }
+      case "cursorClick": {
+        if (!this.currentGame || this.currentPlayerId === null) {
+          this.ws.close();
+          return;
+        }
+
+        const cursorPayload = decodedMessage.payload.cursorClick;
+        const tile = cursorPayload.tile;
+        if (!tile) {
+          this.sendProtocolError("CURSOR_TILE_MISSING", "Cursor click must include tile coordinates.");
+          return;
+        }
+
+        const isValidTile =
+          tile.y < this.currentGame.rows &&
+          tile.x < this.currentGame.cols;
+
+        if (!isValidTile) {
+          this.sendProtocolError(
+            "CURSOR_TILE_OUT_OF_BOUNDS",
+            `Cursor tile (${tile.y}, ${tile.x}) is outside board bounds.`
+          );
+          return;
+        }
+
+        this.currentGame.updatePlayerCursorPosition(this.currentPlayerId, tile);
+        this.currentGame.messageSender.sendPlayerCursorUpdate(this.currentPlayerId, tile);
+        return;
+      }
       default: {
         logger.warn("[server] Unknown client payload kind. Closing socket.");
         this.ws.close();
@@ -167,8 +214,22 @@ export default class MessageReceiver {
 
     logger.debug(`[server] Client attached to game ${this.currentGame.gameId}.`);
 
+    this.currentPlayerId = this.currentGame.registerPlayer(this.ws);
+    logger.debug(
+      `[server] Assigned player ${this.currentPlayerId} to game ${this.currentGame.gameId}.`
+    );
+
     this.currentGame.messageSender.addClient(this.ws);
-    this.currentGame.messageSender.sendConfirmation(this.ws, this.currentGame);
+    this.currentGame.messageSender.sendConfirmation(this.ws, this.currentGame, this.currentPlayerId);
+
+    const existingCursorPositions = this.currentGame.getPlayerCursorSnapshot(this.currentPlayerId);
+    for (const cursorPosition of existingCursorPositions) {
+      this.currentGame.messageSender.sendPlayerCursorUpdate(
+        cursorPosition.playerId,
+        cursorPosition.tile,
+        this.ws
+      );
+    }
 
     if (this.currentGame.board) {
       const shownTiles = this.currentGame.board.getShownTiles();

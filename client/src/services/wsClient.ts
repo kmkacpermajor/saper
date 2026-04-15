@@ -12,6 +12,7 @@ import {
   createResetPayload,
   createRevealTilePayload
 } from "@/services/wsProtocol";
+import { createCursorClickPayload } from "@/services/wsCursorProtocol";
 
 const DEV_WS_URL = "ws://localhost:8085";
 
@@ -79,6 +80,10 @@ class WsClient {
 
   flagTile(tile: TileCoordinates, unflag: boolean): void {
     this.send(createFlagTilePayload(tile.y, tile.x, unflag));
+  }
+
+  sendCursorClick(tile: TileCoordinates): void {
+    this.send(createCursorClickPayload(tile));
   }
 
   sendReset(): void {

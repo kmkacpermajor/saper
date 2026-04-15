@@ -1,5 +1,7 @@
 import { Application, Assets, Container, Sprite, Texture } from "pixi.js";
-import { TileUpdate ,TileType } from "@saper/contracts";
+import { TileUpdate, TileType, type TileCoordinates } from "@saper/contracts";
+import PlayerCursorOverlay from "./playerCursorOverlay";
+import { resolvePlayerCursorTint } from "./playerCursorPalette";
 
 type TileTextures = {
   default: Texture | null;
@@ -12,6 +14,7 @@ type VisibleWorld = { x: number; y: number; width: number; height: number };
 
 export default class BoardRenderer {
   readonly container = new Container();
+  private readonly playerCursorOverlay: PlayerCursorOverlay;
 
   private readonly tileSize: number;
   private readonly overscanTiles = 2;
@@ -30,11 +33,13 @@ export default class BoardRenderer {
 
   constructor(tileSize: number) {
     this.tileSize = tileSize;
+    this.playerCursorOverlay = new PlayerCursorOverlay(tileSize);
   }
 
   async init(app: Application): Promise<void> {
     await this.loadTextures();
     app.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+    this.container.addChild(this.playerCursorOverlay.container);
     app.stage.addChild(this.container);
   }
 
@@ -50,6 +55,20 @@ export default class BoardRenderer {
     for (let i = 0; i < this.poolAssignments.length; i++) {
       this.poolAssignments[i] = null;
     }
+    this.playerCursorOverlay.clear();
+  }
+
+  updatePlayerCursor(playerId: number, tile: TileCoordinates): void {
+    this.playerCursorOverlay.updatePlayerCursor(playerId, tile, resolvePlayerCursorTint(playerId));
+    this.container.setChildIndex(this.playerCursorOverlay.container, this.container.children.length - 1);
+  }
+
+  removePlayerCursor(playerId: number): void {
+    this.playerCursorOverlay.removePlayerCursor(playerId);
+  }
+
+  clearPlayerCursors(): void {
+    this.playerCursorOverlay.clear();
   }
 
   renderTiles(tiles: ReadonlyArray<TileUpdate>): void {
@@ -118,9 +137,12 @@ export default class BoardRenderer {
       this.spritePool[i].visible = false;
       this.poolAssignments[i] = null;
     }
+
+    this.container.setChildIndex(this.playerCursorOverlay.container, this.container.children.length - 1);
   }
 
   destroy(): void {
+    this.playerCursorOverlay.destroy();
     this.container.removeFromParent();
     this.container.removeChildren();
     this.tileTypes = [];

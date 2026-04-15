@@ -48,6 +48,10 @@ message FlagTileRequest {
   bool unflag = 3;
 }
 
+message CursorClickRequest {
+  TileCoordinates tile = 1;
+}
+
 message ResetRequest {}
 
 message ClientMessage {
@@ -58,6 +62,7 @@ message ClientMessage {
     RevealTileRequest reveal_tile = 4;
     FlagTileRequest flag_tile = 5;
     ResetRequest reset = 6;
+    CursorClickRequest cursor_click = 7;
   }
 }
 
@@ -72,6 +77,7 @@ message ConnectResponse {
   uint32 rows = 2;
   uint32 cols = 3;
   uint32 num_bombs = 4;
+  uint32 player_id = 5;
 }
 
 message RevealTilesResponse {
@@ -89,6 +95,15 @@ message ErrorResponse {
   string message = 2;
 }
 
+message PlayerCursorUpdateResponse {
+  uint32 player_id = 1;
+  TileCoordinates tile = 2;
+}
+
+message PlayerCursorRemoveResponse {
+  uint32 player_id = 1;
+}
+
 message ServerMessage {
   uint32 contract_version = 1;
   oneof payload {
@@ -97,5 +112,7 @@ message ServerMessage {
     GameOverResponse game_over = 4;
     ResetResponse reset = 5;
     ErrorResponse error = 6;
+    PlayerCursorUpdateResponse player_cursor_update = 7;
+    PlayerCursorRemoveResponse player_cursor_remove = 8;
   }
 }

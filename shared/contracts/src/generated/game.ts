@@ -76,6 +76,15 @@ export interface FlagTileRequest {
     unflag: boolean;
 }
 /**
+ * @generated from protobuf message saper.CursorClickRequest
+ */
+export interface CursorClickRequest {
+    /**
+     * @generated from protobuf field: saper.TileCoordinates tile = 1
+     */
+    tile?: TileCoordinates;
+}
+/**
  * @generated from protobuf message saper.ResetRequest
  */
 export interface ResetRequest {
@@ -122,6 +131,12 @@ export interface ClientMessage {
          */
         reset: ResetRequest;
     } | {
+        oneofKind: "cursorClick";
+        /**
+         * @generated from protobuf field: saper.CursorClickRequest cursor_click = 7
+         */
+        cursorClick: CursorClickRequest;
+    } | {
         oneofKind: undefined;
     };
 }
@@ -162,6 +177,10 @@ export interface ConnectResponse {
      * @generated from protobuf field: uint32 num_bombs = 4
      */
     numBombs: number;
+    /**
+     * @generated from protobuf field: uint32 player_id = 5
+     */
+    playerId: number;
 }
 /**
  * @generated from protobuf message saper.RevealTilesResponse
@@ -198,6 +217,28 @@ export interface ErrorResponse {
      * @generated from protobuf field: string message = 2
      */
     message: string;
+}
+/**
+ * @generated from protobuf message saper.PlayerCursorUpdateResponse
+ */
+export interface PlayerCursorUpdateResponse {
+    /**
+     * @generated from protobuf field: uint32 player_id = 1
+     */
+    playerId: number;
+    /**
+     * @generated from protobuf field: saper.TileCoordinates tile = 2
+     */
+    tile?: TileCoordinates;
+}
+/**
+ * @generated from protobuf message saper.PlayerCursorRemoveResponse
+ */
+export interface PlayerCursorRemoveResponse {
+    /**
+     * @generated from protobuf field: uint32 player_id = 1
+     */
+    playerId: number;
 }
 /**
  * @generated from protobuf message saper.ServerMessage
@@ -240,6 +281,18 @@ export interface ServerMessage {
          * @generated from protobuf field: saper.ErrorResponse error = 6
          */
         error: ErrorResponse;
+    } | {
+        oneofKind: "playerCursorUpdate";
+        /**
+         * @generated from protobuf field: saper.PlayerCursorUpdateResponse player_cursor_update = 7
+         */
+        playerCursorUpdate: PlayerCursorUpdateResponse;
+    } | {
+        oneofKind: "playerCursorRemove";
+        /**
+         * @generated from protobuf field: saper.PlayerCursorRemoveResponse player_cursor_remove = 8
+         */
+        playerCursorRemove: PlayerCursorRemoveResponse;
     } | {
         oneofKind: undefined;
     };
@@ -590,6 +643,52 @@ class FlagTileRequest$Type extends MessageType<FlagTileRequest> {
  */
 export const FlagTileRequest = new FlagTileRequest$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class CursorClickRequest$Type extends MessageType<CursorClickRequest> {
+    constructor() {
+        super("saper.CursorClickRequest", [
+            { no: 1, name: "tile", kind: "message", T: () => TileCoordinates }
+        ]);
+    }
+    create(value?: PartialMessage<CursorClickRequest>): CursorClickRequest {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        if (value !== undefined)
+            reflectionMergePartial<CursorClickRequest>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: CursorClickRequest): CursorClickRequest {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* saper.TileCoordinates tile */ 1:
+                    message.tile = TileCoordinates.internalBinaryRead(reader, reader.uint32(), options, message.tile);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: CursorClickRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* saper.TileCoordinates tile = 1; */
+        if (message.tile)
+            TileCoordinates.internalBinaryWrite(message.tile, writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message saper.CursorClickRequest
+ */
+export const CursorClickRequest = new CursorClickRequest$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class ResetRequest$Type extends MessageType<ResetRequest> {
     constructor() {
         super("saper.ResetRequest", []);
@@ -636,7 +735,8 @@ class ClientMessage$Type extends MessageType<ClientMessage> {
             { no: 3, name: "join_game", kind: "message", oneof: "payload", T: () => JoinGameRequest },
             { no: 4, name: "reveal_tile", kind: "message", oneof: "payload", T: () => RevealTileRequest },
             { no: 5, name: "flag_tile", kind: "message", oneof: "payload", T: () => FlagTileRequest },
-            { no: 6, name: "reset", kind: "message", oneof: "payload", T: () => ResetRequest }
+            { no: 6, name: "reset", kind: "message", oneof: "payload", T: () => ResetRequest },
+            { no: 7, name: "cursor_click", kind: "message", oneof: "payload", T: () => CursorClickRequest }
         ]);
     }
     create(value?: PartialMessage<ClientMessage>): ClientMessage {
@@ -685,6 +785,12 @@ class ClientMessage$Type extends MessageType<ClientMessage> {
                         reset: ResetRequest.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).reset)
                     };
                     break;
+                case /* saper.CursorClickRequest cursor_click */ 7:
+                    message.payload = {
+                        oneofKind: "cursorClick",
+                        cursorClick: CursorClickRequest.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).cursorClick)
+                    };
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -715,6 +821,9 @@ class ClientMessage$Type extends MessageType<ClientMessage> {
         /* saper.ResetRequest reset = 6; */
         if (message.payload.oneofKind === "reset")
             ResetRequest.internalBinaryWrite(message.payload.reset, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
+        /* saper.CursorClickRequest cursor_click = 7; */
+        if (message.payload.oneofKind === "cursorClick")
+            CursorClickRequest.internalBinaryWrite(message.payload.cursorClick, writer.tag(7, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -795,7 +904,8 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
             { no: 1, name: "game_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 2, name: "rows", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 3, name: "cols", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 4, name: "num_bombs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+            { no: 4, name: "num_bombs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 5, name: "player_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
     create(value?: PartialMessage<ConnectResponse>): ConnectResponse {
@@ -804,6 +914,7 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
         message.rows = 0;
         message.cols = 0;
         message.numBombs = 0;
+        message.playerId = 0;
         if (value !== undefined)
             reflectionMergePartial<ConnectResponse>(this, message, value);
         return message;
@@ -824,6 +935,9 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
                     break;
                 case /* uint32 num_bombs */ 4:
                     message.numBombs = reader.uint32();
+                    break;
+                case /* uint32 player_id */ 5:
+                    message.playerId = reader.uint32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -849,6 +963,9 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
         /* uint32 num_bombs = 4; */
         if (message.numBombs !== 0)
             writer.tag(4, WireType.Varint).uint32(message.numBombs);
+        /* uint32 player_id = 5; */
+        if (message.playerId !== 0)
+            writer.tag(5, WireType.Varint).uint32(message.playerId);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1047,6 +1164,107 @@ class ErrorResponse$Type extends MessageType<ErrorResponse> {
  */
 export const ErrorResponse = new ErrorResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
+class PlayerCursorUpdateResponse$Type extends MessageType<PlayerCursorUpdateResponse> {
+    constructor() {
+        super("saper.PlayerCursorUpdateResponse", [
+            { no: 1, name: "player_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 2, name: "tile", kind: "message", T: () => TileCoordinates }
+        ]);
+    }
+    create(value?: PartialMessage<PlayerCursorUpdateResponse>): PlayerCursorUpdateResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.playerId = 0;
+        if (value !== undefined)
+            reflectionMergePartial<PlayerCursorUpdateResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PlayerCursorUpdateResponse): PlayerCursorUpdateResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* uint32 player_id */ 1:
+                    message.playerId = reader.uint32();
+                    break;
+                case /* saper.TileCoordinates tile */ 2:
+                    message.tile = TileCoordinates.internalBinaryRead(reader, reader.uint32(), options, message.tile);
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: PlayerCursorUpdateResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* uint32 player_id = 1; */
+        if (message.playerId !== 0)
+            writer.tag(1, WireType.Varint).uint32(message.playerId);
+        /* saper.TileCoordinates tile = 2; */
+        if (message.tile)
+            TileCoordinates.internalBinaryWrite(message.tile, writer.tag(2, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message saper.PlayerCursorUpdateResponse
+ */
+export const PlayerCursorUpdateResponse = new PlayerCursorUpdateResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class PlayerCursorRemoveResponse$Type extends MessageType<PlayerCursorRemoveResponse> {
+    constructor() {
+        super("saper.PlayerCursorRemoveResponse", [
+            { no: 1, name: "player_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<PlayerCursorRemoveResponse>): PlayerCursorRemoveResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.playerId = 0;
+        if (value !== undefined)
+            reflectionMergePartial<PlayerCursorRemoveResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: PlayerCursorRemoveResponse): PlayerCursorRemoveResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* uint32 player_id */ 1:
+                    message.playerId = reader.uint32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: PlayerCursorRemoveResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* uint32 player_id = 1; */
+        if (message.playerId !== 0)
+            writer.tag(1, WireType.Varint).uint32(message.playerId);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message saper.PlayerCursorRemoveResponse
+ */
+export const PlayerCursorRemoveResponse = new PlayerCursorRemoveResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
 class ServerMessage$Type extends MessageType<ServerMessage> {
     constructor() {
         super("saper.ServerMessage", [
@@ -1055,7 +1273,9 @@ class ServerMessage$Type extends MessageType<ServerMessage> {
             { no: 3, name: "reveal_tiles", kind: "message", oneof: "payload", T: () => RevealTilesResponse },
             { no: 4, name: "game_over", kind: "message", oneof: "payload", T: () => GameOverResponse },
             { no: 5, name: "reset", kind: "message", oneof: "payload", T: () => ResetResponse },
-            { no: 6, name: "error", kind: "message", oneof: "payload", T: () => ErrorResponse }
+            { no: 6, name: "error", kind: "message", oneof: "payload", T: () => ErrorResponse },
+            { no: 7, name: "player_cursor_update", kind: "message", oneof: "payload", T: () => PlayerCursorUpdateResponse },
+            { no: 8, name: "player_cursor_remove", kind: "message", oneof: "payload", T: () => PlayerCursorRemoveResponse }
         ]);
     }
     create(value?: PartialMessage<ServerMessage>): ServerMessage {
@@ -1104,6 +1324,18 @@ class ServerMessage$Type extends MessageType<ServerMessage> {
                         error: ErrorResponse.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).error)
                     };
                     break;
+                case /* saper.PlayerCursorUpdateResponse player_cursor_update */ 7:
+                    message.payload = {
+                        oneofKind: "playerCursorUpdate",
+                        playerCursorUpdate: PlayerCursorUpdateResponse.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).playerCursorUpdate)
+                    };
+                    break;
+                case /* saper.PlayerCursorRemoveResponse player_cursor_remove */ 8:
+                    message.payload = {
+                        oneofKind: "playerCursorRemove",
+                        playerCursorRemove: PlayerCursorRemoveResponse.internalBinaryRead(reader, reader.uint32(), options, (message.payload as any).playerCursorRemove)
+                    };
+                    break;
                 default:
                     let u = options.readUnknownField;
                     if (u === "throw")
@@ -1134,6 +1366,12 @@ class ServerMessage$Type extends MessageType<ServerMessage> {
         /* saper.ErrorResponse error = 6; */
         if (message.payload.oneofKind === "error")
             ErrorResponse.internalBinaryWrite(message.payload.error, writer.tag(6, WireType.LengthDelimited).fork(), options).join();
+        /* saper.PlayerCursorUpdateResponse player_cursor_update = 7; */
+        if (message.payload.oneofKind === "playerCursorUpdate")
+            PlayerCursorUpdateResponse.internalBinaryWrite(message.payload.playerCursorUpdate, writer.tag(7, WireType.LengthDelimited).fork(), options).join();
+        /* saper.PlayerCursorRemoveResponse player_cursor_remove = 8; */
+        if (message.payload.oneofKind === "playerCursorRemove")
+            PlayerCursorRemoveResponse.internalBinaryWrite(message.payload.playerCursorRemove, writer.tag(8, WireType.LengthDelimited).fork(), options).join();
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

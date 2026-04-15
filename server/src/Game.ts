@@ -1,6 +1,8 @@
 import { GameState, TileType, type TileCoordinates, type TileUpdate } from "@saper/contracts";
+import type { WebSocket } from "ws";
 import Board from "./Board.js";
 import MessageSender from "./MessageSender.js";
+import PlayerIdentityRegistry from "./PlayerIdentityRegistry.js";
 
 const MAX_ZERO_START_RETRIES = 8;
 
@@ -11,6 +13,8 @@ export default class Game {
   readonly numBombs: number;
   readonly messageSender: MessageSender;
   board: Board | null;
+  private readonly playerIdentityRegistry: PlayerIdentityRegistry;
+  private readonly playerCursorPositions: Map<number, TileCoordinates>;
 
   constructor(gameId: number, rows: number, cols: number, numBombs: number, onAllClientsDisconnected: () => void) {
     this.gameId = gameId;
@@ -19,6 +23,46 @@ export default class Game {
     this.numBombs = numBombs;
     this.messageSender = new MessageSender(onAllClientsDisconnected);
     this.board = null;
+    this.playerIdentityRegistry = new PlayerIdentityRegistry();
+    this.playerCursorPositions = new Map<number, TileCoordinates>();
+  }
+
+  registerPlayer(ws: WebSocket): number {
+    return this.playerIdentityRegistry.assignPlayerId(ws);
+  }
+
+  getPlayerId(ws: WebSocket): number | null {
+    return this.playerIdentityRegistry.getPlayerId(ws);
+  }
+
+  removePlayer(ws: WebSocket): number | null {
+    const removedPlayerId = this.playerIdentityRegistry.removePlayer(ws);
+    if (removedPlayerId !== null) {
+      this.playerCursorPositions.delete(removedPlayerId);
+    }
+
+    return removedPlayerId;
+  }
+
+  updatePlayerCursorPosition(playerId: number, tile: TileCoordinates): void {
+    this.playerCursorPositions.set(playerId, { y: tile.y, x: tile.x });
+  }
+
+  getPlayerCursorSnapshot(excludePlayerId: number | null = null): Array<{ playerId: number; tile: TileCoordinates }> {
+    const snapshot: Array<{ playerId: number; tile: TileCoordinates }> = [];
+
+    for (const [playerId, tile] of this.playerCursorPositions.entries()) {
+      if (excludePlayerId !== null && playerId === excludePlayerId) {
+        continue;
+      }
+
+      snapshot.push({
+        playerId,
+        tile: { y: tile.y, x: tile.x }
+      });
+    }
+
+    return snapshot;
   }
 
   get gameEnded(): boolean {
@@ -31,6 +75,7 @@ export default class Game {
 
   resetGame(): void {
     this.board = null;
+    this.playerCursorPositions.clear();
     this.messageSender.sendReset();
   }
 

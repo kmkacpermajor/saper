@@ -22,6 +22,7 @@ export default class GameController {
   private _gameId: number;
   private _gameState: GameState;
   private _numBombs: number;
+  private _playerId: number;
   private readonly gameEventHandler: GameEventHandler;
   private readonly boardRenderer: BoardRenderer;
   private readonly wsClient: WsClient;
@@ -50,6 +51,7 @@ export default class GameController {
     this.wsClient = wsClient;
     this._gameState = GameState.IN_PROGRESS;
     this._numBombs = 0;
+    this._playerId = 0;
     this.initialNumBombs = 0;
     this.rows = 0;
     this.cols = 0;
@@ -90,6 +92,15 @@ export default class GameController {
     this.emitEvent(GAME_EVENT_TYPE.NUM_BOMBS_UPDATE, value);
   }
 
+  get playerId(): number {
+    return this._playerId;
+  }
+
+  set playerId(value: number) {
+    this._playerId = value;
+    this.emitEvent(GAME_EVENT_TYPE.PLAYER_ID_UPDATE, value);
+  }
+
   emitEvent<T extends GameEvent["type"]>(
     type: T,
     payload: Extract<GameEvent, { type: T }>["payload"]
@@ -122,7 +133,9 @@ export default class GameController {
     switch (message.payload.oneofKind) {
       case "connect": {
         const payload = message.payload.connect;
-        this.applyConnected(payload.gameId, payload.rows, payload.cols, payload.numBombs);
+        const playerId =
+          "playerId" in payload && typeof payload.playerId === "number" ? payload.playerId : 0;
+        this.applyConnected(payload.gameId, playerId, payload.rows, payload.cols, payload.numBombs);
         this.lifecycleHandlers.onConnected?.();
         return;
       }
@@ -143,6 +156,26 @@ export default class GameController {
         }
 
         this.applyRevealTiles(revealUpdates);
+        return;
+      }
+
+      case "playerCursorUpdate": {
+        const cursorPayload = message.payload.playerCursorUpdate;
+
+        if (!cursorPayload.tile || cursorPayload.playerId === this.playerId) {
+          return;
+        }
+
+        if (!this.isWithinBoard(cursorPayload.tile.y, cursorPayload.tile.x)) {
+          return;
+        }
+
+        this.boardRenderer.updatePlayerCursor(cursorPayload.playerId, cursorPayload.tile);
+        return;
+      }
+
+      case "playerCursorRemove": {
+        this.boardRenderer.removePlayerCursor(message.payload.playerCursorRemove.playerId);
         return;
       }
 
@@ -168,8 +201,9 @@ export default class GameController {
     }
   };
 
-  applyConnected(gameId: number, rows: number, cols: number, bombs: number): void {
+  applyConnected(gameId: number, playerId: number, rows: number, cols: number, bombs: number): void {
     this.gameId = gameId;
+    this.playerId = playerId;
     this.rows = rows;
     this.cols = cols;
     this.boardState = this.initializeBoard(rows, cols);
@@ -177,6 +211,7 @@ export default class GameController {
     this.initialNumBombs = bombs;
 
     this.boardRenderer.setupBoard(rows, cols);
+    this.boardRenderer.clearPlayerCursors();
     this.viewportController.setWorldSize(this.cols * this.tileSize, this.rows * this.tileSize);
     this.updateViewportFromContainer(true, true);
 
@@ -234,6 +269,7 @@ export default class GameController {
     this.touchInputHandler.reset();
     this.boardState = this.initializeBoard(this.rows, this.cols);
     this.boardRenderer.setupBoard(this.rows, this.cols);
+    this.boardRenderer.clearPlayerCursors();
     this.viewportController.setWorldSize(this.cols * this.tileSize, this.rows * this.tileSize);
     this.updateViewportFromContainer(true, true);
 
@@ -250,6 +286,7 @@ export default class GameController {
   }
 
   revealTile(tile: TileCoordinates): void {
+    this.wsClient.sendCursorClick(tile);
     this.wsClient.revealTiles([tile]);
   }
 
@@ -259,6 +296,7 @@ export default class GameController {
       return;
     }
 
+    this.wsClient.sendCursorClick(tile);
     this.wsClient.flagTile(tile, tileType === TileType.FLAGGED);
   }
 
@@ -289,6 +327,7 @@ export default class GameController {
         tile: centerTile,
         hiddenNeighborsCount: hiddenNeighbors.length
       });
+      this.wsClient.sendCursorClick(centerTile);
       this.wsClient.revealTiles(hiddenNeighbors);
       return true;
     }
@@ -586,6 +625,8 @@ export default class GameController {
     window.removeEventListener("resize", this.handleWindowResize);
     this.mouseInputHandler.reset();
     this.touchInputHandler.reset();
+    this.boardRenderer.clearPlayerCursors();
+    this.playerId = 0;
     this.app.ticker.stop();
     this.boardRenderer.destroy();
     this.app.stage.removeChildren();

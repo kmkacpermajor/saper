@@ -22,6 +22,7 @@ export const useGameStore = defineStore("game", () => {
 
   const currentGameState = ref(GameState.IN_PROGRESS);
   const currentNumBombs = ref(0);
+  const currentPlayerId = ref(0);
   let gameController: GameController | null = null;
 
   const maxBombs = computed(() => Math.floor(boardWidth.value * boardHeight.value * 0.35));
@@ -35,6 +36,7 @@ export const useGameStore = defineStore("game", () => {
   const resetRuntimeState = (): void => {
     currentGameState.value = GameState.IN_PROGRESS;
     currentNumBombs.value = 0;
+    currentPlayerId.value = 0;
   };
 
   const resetSessionState = (): void => {
@@ -58,6 +60,11 @@ export const useGameStore = defineStore("game", () => {
 
     if (event.type === GAME_EVENT_TYPE.NUM_BOMBS_UPDATE) {
       currentNumBombs.value = event.payload;
+      return;
+    }
+
+    if (event.type === GAME_EVENT_TYPE.PLAYER_ID_UPDATE) {
+      currentPlayerId.value = event.payload;
     }
   };
 
@@ -222,6 +229,7 @@ export const useGameStore = defineStore("game", () => {
     boardWidth,
     currentGameState,
     currentNumBombs,
+    currentPlayerId,
     gameStatusMessage,
     maxBombs,
     numBombs

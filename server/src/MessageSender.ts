@@ -1,4 +1,10 @@
-import { CONTRACT_VERSION, GameState, encodeServerMessage, type TileUpdate } from "@saper/contracts";
+import {
+  CONTRACT_VERSION,
+  GameState,
+  encodeServerMessage,
+  type TileCoordinates,
+  type TileUpdate
+} from "@saper/contracts";
 import { WebSocket } from "ws";
 import type Game from "./Game.js";
 
@@ -31,7 +37,7 @@ export default class MessageSender {
     });
   }
 
-  sendConfirmation(ws: WebSocket, game: Game): void {
+  sendConfirmation(ws: WebSocket, game: Game, playerId: number): void {
     const payload = encodeServerMessage({
       contractVersion: CONTRACT_VERSION,
       payload: {
@@ -40,7 +46,8 @@ export default class MessageSender {
           gameId: game.gameId,
           rows: game.rows,
           cols: game.cols,
-          numBombs: game.numBombs
+          numBombs: game.numBombs,
+          playerId
         }
       }
     });
@@ -71,6 +78,38 @@ export default class MessageSender {
       client.send(payload);
       return;
     }
+
+    this.broadcast(payload);
+  }
+
+  sendPlayerCursorUpdate(playerId: number, tile: TileCoordinates, client: WebSocket | null = null): void {
+    const payload = encodeServerMessage({
+      payload: {
+        oneofKind: "playerCursorUpdate",
+        playerCursorUpdate: {
+          playerId,
+          tile
+        }
+      }
+    });
+
+    if (client) {
+      client.send(payload);
+      return;
+    }
+
+    this.broadcast(payload);
+  }
+
+  sendPlayerCursorRemove(playerId: number): void {
+    const payload = encodeServerMessage({
+      payload: {
+        oneofKind: "playerCursorRemove",
+        playerCursorRemove: {
+          playerId
+        }
+      }
+    });
 
     this.broadcast(payload);
   }
