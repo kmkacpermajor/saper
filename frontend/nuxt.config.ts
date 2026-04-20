@@ -19,7 +19,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      wsUrl: "ws://localhost:8085"
+      wsUrl: "ws://localhost:8085" // można nadpisać przez środowisko (NUXT_PUBLIC_WS_URL)
     }
   },
 

@@ -35,6 +35,8 @@ const waitForOpenSocket = async (socket: WebSocket): Promise<void> => {
 };
 
 class WsClient {
+	constructor(private readonly wsUrl: string) {}
+
 	private socket: WebSocket | undefined;
 	private onServerMessage: ((message: ServerMessage) => void) | undefined;
 	private pendingHandshake: PendingHandshake | undefined;
@@ -61,9 +63,11 @@ class WsClient {
 
 	private async connectSocket(onServerMessage?: (message: ServerMessage) => void): Promise<void> {
 		this.disconnect();
+		if (!this.wsUrl) {
+			throw new Error("Missing `public.wsUrl` in runtime config.");
+		}
 
-		// this.socket = new WebSocket(runtimeConfig.public.wsUrl);
-		this.socket = new WebSocket("ws://localhost:8085");
+		this.socket = new WebSocket(this.wsUrl);
 		this.onServerMessage = onServerMessage;
 		await waitForOpenSocket(this.socket);
 
@@ -203,12 +207,15 @@ class WsClient {
 }
 
 export const useWsClient = (): WsClient => {
+	const runtimeConfig = useRuntimeConfig();
+	const wsUrl = String(runtimeConfig.public.wsUrl ?? "");
 	const wsClientState = useState<WsClient | null>("ws-client", () => null);
 
-    if (import.meta.client)
-	return wsClientState.value ?? (wsClientState.value = new WsClient());
+	if (import.meta.client) {
+		return wsClientState.value ?? (wsClientState.value = new WsClient(wsUrl));
+	}
 
-    return new WsClient();
+	return new WsClient(wsUrl);
 };
 
 export { WsClient };
