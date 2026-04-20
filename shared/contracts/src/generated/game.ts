@@ -11,6 +11,8 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
+ * Creates a new game session.
+ *
  * @generated from protobuf message saper.CreateGameRequest
  */
 export interface CreateGameRequest {
@@ -28,6 +30,8 @@ export interface CreateGameRequest {
     numBombs: number;
 }
 /**
+ * Joins an already existing game session by id.
+ *
  * @generated from protobuf message saper.JoinGameRequest
  */
 export interface JoinGameRequest {
@@ -312,7 +316,15 @@ export enum GameState {
     /**
      * @generated from protobuf enum value: GAME_STATE_LOST = 2;
      */
-    LOST = 2
+    LOST = 2,
+    /**
+     * @generated from protobuf enum value: GAME_STATE_CONNECTING = -1;
+     */
+    CONNECTING = -1,
+    /**
+     * @generated from protobuf enum value: GAME_STATE_DISCONNECTED = -2;
+     */
+    DISCONNECTED = -2
 }
 /**
  * @generated from protobuf enum saper.TileType

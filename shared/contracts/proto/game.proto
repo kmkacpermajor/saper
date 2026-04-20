@@ -6,6 +6,8 @@ enum GameState {
   GAME_STATE_IN_PROGRESS = 0;
   GAME_STATE_WON = 1;
   GAME_STATE_LOST = 2;
+  GAME_STATE_CONNECTING = -1;
+  GAME_STATE_DISCONNECTED = -2;
 }
 
 enum TileType {
@@ -23,12 +25,14 @@ enum TileType {
   TILE_TYPE_EIGHT = 11;
 }
 
+// Creates a new game session.
 message CreateGameRequest {
   uint32 rows = 1;
   uint32 cols = 2;
   uint32 num_bombs = 3;
 }
 
+// Joins an already existing game session by id.
 message JoinGameRequest {
   uint32 requested_game_id = 1;
 }
