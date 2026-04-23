@@ -203,6 +203,36 @@ export interface GameOverResponse {
      * @generated from protobuf field: saper.GameState state = 1
      */
     state: GameState;
+    /**
+     * @generated from protobuf field: uint32 gameTimeMs = 2
+     */
+    gameTimeMs: number;
+}
+/**
+ * @generated from protobuf message saper.LeaderboardEntry
+ */
+export interface LeaderboardEntry {
+    /**
+     * @generated from protobuf field: uint32 id = 1
+     */
+    id: number;
+    /**
+     * @generated from protobuf field: repeated string player_names = 2
+     */
+    playerNames: string[];
+    /**
+     * @generated from protobuf field: uint32 time_ms = 3
+     */
+    timeMs: number;
+}
+/**
+ * @generated from protobuf message saper.LeaderboardResponse
+ */
+export interface LeaderboardResponse {
+    /**
+     * @generated from protobuf field: repeated saper.LeaderboardEntry entries = 1
+     */
+    entries: LeaderboardEntry[];
 }
 /**
  * @generated from protobuf message saper.ResetResponse
@@ -1039,12 +1069,14 @@ export const RevealTilesResponse = new RevealTilesResponse$Type();
 class GameOverResponse$Type extends MessageType<GameOverResponse> {
     constructor() {
         super("saper.GameOverResponse", [
-            { no: 1, name: "state", kind: "enum", T: () => ["saper.GameState", GameState, "GAME_STATE_"] }
+            { no: 1, name: "state", kind: "enum", T: () => ["saper.GameState", GameState, "GAME_STATE_"] },
+            { no: 2, name: "gameTimeMs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
     create(value?: PartialMessage<GameOverResponse>): GameOverResponse {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.state = 0;
+        message.gameTimeMs = 0;
         if (value !== undefined)
             reflectionMergePartial<GameOverResponse>(this, message, value);
         return message;
@@ -1056,6 +1088,9 @@ class GameOverResponse$Type extends MessageType<GameOverResponse> {
             switch (fieldNo) {
                 case /* saper.GameState state */ 1:
                     message.state = reader.int32();
+                    break;
+                case /* uint32 gameTimeMs */ 2:
+                    message.gameTimeMs = reader.uint32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1072,6 +1107,9 @@ class GameOverResponse$Type extends MessageType<GameOverResponse> {
         /* saper.GameState state = 1; */
         if (message.state !== 0)
             writer.tag(1, WireType.Varint).int32(message.state);
+        /* uint32 gameTimeMs = 2; */
+        if (message.gameTimeMs !== 0)
+            writer.tag(2, WireType.Varint).uint32(message.gameTimeMs);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1082,6 +1120,116 @@ class GameOverResponse$Type extends MessageType<GameOverResponse> {
  * @generated MessageType for protobuf message saper.GameOverResponse
  */
 export const GameOverResponse = new GameOverResponse$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class LeaderboardEntry$Type extends MessageType<LeaderboardEntry> {
+    constructor() {
+        super("saper.LeaderboardEntry", [
+            { no: 1, name: "id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 2, name: "player_names", kind: "scalar", repeat: 2 /*RepeatType.UNPACKED*/, T: 9 /*ScalarType.STRING*/ },
+            { no: 3, name: "time_ms", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+        ]);
+    }
+    create(value?: PartialMessage<LeaderboardEntry>): LeaderboardEntry {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.id = 0;
+        message.playerNames = [];
+        message.timeMs = 0;
+        if (value !== undefined)
+            reflectionMergePartial<LeaderboardEntry>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: LeaderboardEntry): LeaderboardEntry {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* uint32 id */ 1:
+                    message.id = reader.uint32();
+                    break;
+                case /* repeated string player_names */ 2:
+                    message.playerNames.push(reader.string());
+                    break;
+                case /* uint32 time_ms */ 3:
+                    message.timeMs = reader.uint32();
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: LeaderboardEntry, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* uint32 id = 1; */
+        if (message.id !== 0)
+            writer.tag(1, WireType.Varint).uint32(message.id);
+        /* repeated string player_names = 2; */
+        for (let i = 0; i < message.playerNames.length; i++)
+            writer.tag(2, WireType.LengthDelimited).string(message.playerNames[i]);
+        /* uint32 time_ms = 3; */
+        if (message.timeMs !== 0)
+            writer.tag(3, WireType.Varint).uint32(message.timeMs);
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message saper.LeaderboardEntry
+ */
+export const LeaderboardEntry = new LeaderboardEntry$Type();
+// @generated message type with reflection information, may provide speed optimized methods
+class LeaderboardResponse$Type extends MessageType<LeaderboardResponse> {
+    constructor() {
+        super("saper.LeaderboardResponse", [
+            { no: 1, name: "entries", kind: "message", repeat: 2 /*RepeatType.UNPACKED*/, T: () => LeaderboardEntry }
+        ]);
+    }
+    create(value?: PartialMessage<LeaderboardResponse>): LeaderboardResponse {
+        const message = globalThis.Object.create((this.messagePrototype!));
+        message.entries = [];
+        if (value !== undefined)
+            reflectionMergePartial<LeaderboardResponse>(this, message, value);
+        return message;
+    }
+    internalBinaryRead(reader: IBinaryReader, length: number, options: BinaryReadOptions, target?: LeaderboardResponse): LeaderboardResponse {
+        let message = target ?? this.create(), end = reader.pos + length;
+        while (reader.pos < end) {
+            let [fieldNo, wireType] = reader.tag();
+            switch (fieldNo) {
+                case /* repeated saper.LeaderboardEntry entries */ 1:
+                    message.entries.push(LeaderboardEntry.internalBinaryRead(reader, reader.uint32(), options));
+                    break;
+                default:
+                    let u = options.readUnknownField;
+                    if (u === "throw")
+                        throw new globalThis.Error(`Unknown field ${fieldNo} (wire type ${wireType}) for ${this.typeName}`);
+                    let d = reader.skip(wireType);
+                    if (u !== false)
+                        (u === true ? UnknownFieldHandler.onRead : u)(this.typeName, message, fieldNo, wireType, d);
+            }
+        }
+        return message;
+    }
+    internalBinaryWrite(message: LeaderboardResponse, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
+        /* repeated saper.LeaderboardEntry entries = 1; */
+        for (let i = 0; i < message.entries.length; i++)
+            LeaderboardEntry.internalBinaryWrite(message.entries[i], writer.tag(1, WireType.LengthDelimited).fork(), options).join();
+        let u = options.writeUnknownFields;
+        if (u !== false)
+            (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
+        return writer;
+    }
+}
+/**
+ * @generated MessageType for protobuf message saper.LeaderboardResponse
+ */
+export const LeaderboardResponse = new LeaderboardResponse$Type();
 // @generated message type with reflection information, may provide speed optimized methods
 class ResetResponse$Type extends MessageType<ResetResponse> {
     constructor() {

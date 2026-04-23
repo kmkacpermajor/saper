@@ -30,6 +30,8 @@ export default class GameController {
   private cols: number = 0;
   private initialNumBombs: number = 0;
   private gameId: number = 0;
+  private resizeObserver: ResizeObserver | null = null;
+  private observedCanvasParent: HTMLElement | null = null;
 
   app = new Application();
 
@@ -509,6 +511,10 @@ export default class GameController {
     this.zoomViewportAtClientPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, scaleFactor);
   }
 
+  syncViewportToContainer(fitToViewport = false): void {
+    this.updateViewportFromContainer(fitToViewport, false);
+  }
+
   private handleCanvasWheel = (event: WheelEvent): void => {
     event.preventDefault();
 
@@ -522,8 +528,8 @@ export default class GameController {
 
   private updateViewportFromContainer(fitToViewport: boolean, preferCloserStart: boolean): void {
     const parent = this.app.canvas.parentElement;
-    const width = Math.max(320, Math.floor(parent?.clientWidth ?? window.innerWidth));
-    const height = Math.max(240, Math.floor(parent?.clientHeight ?? window.innerHeight));
+    const width = Math.floor(parent?.clientWidth ?? window.innerWidth);
+    const height = Math.floor(parent?.clientHeight ?? window.innerHeight);
 
     this.app.renderer.resize(width, height);
 
@@ -603,6 +609,9 @@ export default class GameController {
     window.removeEventListener("mouseup", this.mouseInputHandler.handleWindowMouseUp);
     window.removeEventListener("mousemove", this.mouseInputHandler.handleWindowMouseMove);
     window.removeEventListener("resize", this.handleWindowResize);
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    this.observedCanvasParent = null;
     this.mouseInputHandler.reset();
     this.touchInputHandler.reset();
     this.boardRenderer.clearPlayerCursors();

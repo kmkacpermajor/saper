@@ -74,7 +74,7 @@ export const useGameSession = () => {
       gameController.value = controller;
 
       container.appendChild(controller.app.canvas);
-      controller.fitViewport();
+      controller.syncViewportToContainer(true);
 
       currentGameState.value = GameState.IN_PROGRESS;
     } catch (err: unknown) {

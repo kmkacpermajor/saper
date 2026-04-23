@@ -12,9 +12,12 @@ export default class Game {
   readonly cols: number;
   readonly numBombs: number;
   readonly messageSender: MessageSender;
-  board: Board | null;
+
   private readonly playerIdentityRegistry: PlayerIdentityRegistry;
   private readonly playerCursorPositions: Map<number, TileCoordinates>;
+
+  board: Board | null = null;
+  gameStartTime: number | null = null;
 
   constructor(gameId: number, rows: number, cols: number, numBombs: number, onAllClientsDisconnected: () => void) {
     this.gameId = gameId;
@@ -22,7 +25,6 @@ export default class Game {
     this.cols = cols;
     this.numBombs = numBombs;
     this.messageSender = new MessageSender(onAllClientsDisconnected);
-    this.board = null;
     this.playerIdentityRegistry = new PlayerIdentityRegistry();
     this.playerCursorPositions = new Map<number, TileCoordinates>();
   }
@@ -92,15 +94,12 @@ export default class Game {
 
         this.board.gameEnded = true;
         this.board.gameWon = state === GameState.WON;
-        this.messageSender.sendGameOver(state);
+        const gameTimeMs = Date.now() - this.gameStartTime!;
+        this.messageSender.sendGameOver(state, gameTimeMs);
     }
   }
 
   private ensureBoardForFirstMove(y: number, x: number): void {
-    if (this.board) {
-      return;
-    }
-
     this.board = new Board(this.rows, this.cols, this.numBombs);
     // Prefer a zero-adjacent first tile, but cap retries to prevent stalls on large boards.
     let retries = 0;
@@ -127,8 +126,12 @@ export default class Game {
       return;
     }
 
-    const firstTile = tiles[0];
-    this.ensureBoardForFirstMove(firstTile.y, firstTile.x);
+    const firstMove = this.board === null;
+
+    if (firstMove) {
+      this.ensureBoardForFirstMove(tiles[0].y, tiles[0].x);
+    }
+    
 
     if (!this.board || this.board.gameEnded) {
       return;
@@ -151,6 +154,10 @@ export default class Game {
     }
 
     this.messageSender.sendRevealTiles(combinedTilesToReveal);
+
+    if (firstMove) {
+      this.gameStartTime = Date.now();
+    }
 
     if (combinedTilesToReveal.some((tile: TileUpdate) => tile.type === TileType.MINE)) {
       this.endGame(GameState.LOST);

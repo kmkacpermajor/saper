@@ -1,8 +1,7 @@
 import type { WebSocket } from "ws";
 import Game from "./Game.js";
 
-// Session ids occupy one byte in current clients; keep 255 unassigned.
-const MAX_GAME_ID = 254;
+const MAX_GAME_ID = 255;
 const MAX_BOMB_DENSITY = 0.35;
 const MIN_BOMB_DENSITY = 0.03;
 const MIN_TILES_FOR_ZERO_START = 9;

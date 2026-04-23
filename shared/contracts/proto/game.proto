@@ -90,6 +90,17 @@ message RevealTilesResponse {
 
 message GameOverResponse {
   GameState state = 1;
+  uint32 gameTimeMs = 2;
+}
+
+message LeaderboardEntry {
+  uint32 id = 1;
+  repeated string player_names = 2;
+  uint32 time_ms = 3;
+}
+
+message LeaderboardResponse {
+  repeated LeaderboardEntry entries = 1;
 }
 
 message ResetResponse {}

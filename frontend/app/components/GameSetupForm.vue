@@ -5,6 +5,7 @@ const numBombs = ref(15);
 const maxBombs = computed(() => Math.floor(boardWidth.value * boardHeight.value * 0.35));
 
 const { connectionType, gameId, connecting, connectFromSetup } = useRouteGameConnection();
+const { gameError } = useGameError();
 
 const onConnect = async (): Promise<void> => {
   await connectFromSetup({
@@ -16,6 +17,10 @@ const onConnect = async (): Promise<void> => {
 </script>
 
 <template>
+  <h1 class="mb-4 text-center text-4xl font-extrabold tracking-tight text-slate-800">Minesweeper 💣</h1>
+  <p v-if="gameError" class="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">
+    {{ gameError }}
+  </p>
   <div class="space-y-4">
     <div class="flex flex-col space-y-2">
       <label class="inline-flex items-center">

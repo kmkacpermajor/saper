@@ -114,12 +114,13 @@ export default class MessageSender {
     this.broadcast(payload);
   }
 
-  sendGameOver(state: GameState): void {
+  sendGameOver(state: GameState, gameTimeMs: number): void {
     const payload = encodeServerMessage({
       payload: {
         oneofKind: "gameOver",
         gameOver: {
-          state
+          state,
+          gameTimeMs
         }
       }
     });

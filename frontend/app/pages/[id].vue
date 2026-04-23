@@ -13,7 +13,9 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <section class="min-h-0 flex flex-1 flex-col gap-3">
+    <section
+        class="mx-auto flex h-full min-h-0 w-full max-w-6xl flex-col rounded-2xl border border-slate-300/80 bg-white/95 p-4 shadow-2xl md:p-8">
+        <!-- <h1 class="mb-4 text-center text-4xl font-extrabold tracking-tight text-slate-800">Minesweeper 💣</h1> -->
         <GameControlPanel :game-id="routeGameId" class="shrink-0" />
 
         <div class="min-h-0 flex-1 overflow-hidden rounded-xl border border-slate-400/70 bg-slate-200/70 p-1">

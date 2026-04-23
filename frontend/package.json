@@ -14,7 +14,7 @@
     "@nuxt/hints": "1.0.3",
     "@nuxt/scripts": "0.13.4",
     "@pinia/nuxt": "0.11.3",
-    "@saper/contracts": "file:../shared/contracts",
+    "@saper/contracts": "link:../shared/contracts",
     "@tailwindcss/vite": "^4.2.2",
     "consola": "^3.4.2",
     "nuxt": "^4.4.2",

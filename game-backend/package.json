@@ -3,7 +3,7 @@
   "name": "minesweeper-server",
   "version": "1.0.0",
   "dependencies": {
-    "@saper/contracts": "file:..\\shared\\contracts",
+    "@saper/contracts": "link:..\\shared\\contracts",
     "pino": "^10.3.1",
     "ws": "^8.20.0"
   },
