@@ -1,4 +1,4 @@
-import { Application, Assets, Container, Sprite, Texture } from "pixi.js";
+import { Application, Assets, Container, Rectangle, Sprite, Texture } from "pixi.js";
 import { TileUpdate, TileType, type TileCoordinates } from "@saper/contracts";
 import PlayerCursorOverlay from "./playerCursorOverlay";
 import { resolvePlayerCursorTint } from "./playerCursorPalette";
@@ -15,6 +15,13 @@ type VisibleWorld = { x: number; y: number; width: number; height: number };
 export default class BoardRenderer {
   readonly container = new Container();
   private readonly playerCursorOverlay: PlayerCursorOverlay;
+  private darkModeQuery: MediaQueryList | null = null;
+  private prefersDarkMode = false;
+  private lightTextures: TileTextures | null = null;
+  private darkTextures: TileTextures | null = null;
+  private readonly handleDarkModePreferenceChange = (event: MediaQueryListEvent): void => {
+    this.applyThemeMode(event.matches);
+  };
 
   private readonly tileSize: number;
   private readonly overscanTiles = 2;
@@ -37,8 +44,9 @@ export default class BoardRenderer {
   }
 
   async init(app: Application): Promise<void> {
-    await this.loadTextures();
-    app.canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+    this.bindDarkModePreference();
+    await this.preloadThemeTextures();
+    this.applyThemeTextures(this.prefersDarkMode);
     this.container.addChild(this.playerCursorOverlay.container);
     app.stage.addChild(this.container);
   }
@@ -56,6 +64,7 @@ export default class BoardRenderer {
       this.poolAssignments[i] = null;
     }
     this.playerCursorOverlay.clear();
+    this.container.hitArea = new Rectangle(0, 0, cols * this.tileSize, rows * this.tileSize);
   }
 
   updatePlayerCursor(playerId: number, tile: TileCoordinates): void {
@@ -84,7 +93,9 @@ export default class BoardRenderer {
         continue;
       }
 
-      this.spritePool[poolIndex]!.texture = this.resolveTextureForTileType(tile.type);
+      const sprite = this.spritePool[poolIndex]!;
+      sprite.texture = this.resolveTextureForTileType(tile.type);
+      sprite.cursor = this.resolveCursorForTileType(tile.type);
     }
   }
 
@@ -126,6 +137,7 @@ export default class BoardRenderer {
         sprite.x = x * this.tileSize;
         sprite.y = y * this.tileSize;
         sprite.texture = this.resolveTextureForTileType(tileType);
+        sprite.cursor = this.resolveCursorForTileType(tileType);
 
         this.poolAssignments[poolCursor] = tileIndex;
         this.tileToPoolIndex.set(tileIndex, poolCursor);
@@ -142,6 +154,7 @@ export default class BoardRenderer {
   }
 
   destroy(): void {
+    this.unbindDarkModePreference();
     this.playerCursorOverlay.destroy();
     this.container.removeFromParent();
     this.container.removeChildren();
@@ -149,23 +162,113 @@ export default class BoardRenderer {
     this.spritePool = [];
     this.poolAssignments = [];
     this.tileToPoolIndex.clear();
+    void Assets.unload("board-spritesheet-light");
+    void Assets.unload("board-spritesheet-dark");
   }
 
-  private async loadTextures(): Promise<void> {
-    const sheet = await Assets.load("/game/spritesheet.json");
-
+  private extractTexturesFromSheet(
+    sheet: { textures: Record<string, Texture> },
+    keyPrefix: string
+  ): TileTextures {
     const get = (name: string): Texture => {
-      const texture = sheet.textures[name];
+      const texture = sheet.textures[`${keyPrefix}${name}`];
       if (!texture) {
-        throw new Error(`Missing frame in spritesheet: ${name}`);
+        throw new Error(`Missing frame in spritesheet: ${keyPrefix}${name}`);
       }
       return texture;
     };
 
-    this.textures.default = get("unrevealed");
-    this.textures.mine = get("bomb");
-    this.textures.flag = get("flag");
-    this.textures.numbers = Array.from({ length: 9 }, (_, i) => get(`${i}`));
+    return {
+      default: get("unrevealed"),
+      mine: get("bomb"),
+      flag: get("flag"),
+      numbers: Array.from({ length: 9 }, (_, i) => get(`${i}`))
+    };
+  }
+
+  private async preloadThemeTextures(): Promise<void> {
+    type LoadedSheet = { textures: Record<string, Texture> };
+
+    const lightSheet = (await Assets.load({
+      alias: "board-spritesheet-light",
+      src: "/game/spritesheet.json"
+    })) as LoadedSheet;
+
+      const darkSheetOrNull = (await Assets.load({
+        alias: "board-spritesheet-dark",
+        src: "/game/spritesheet_dark.json",
+      })) as LoadedSheet;
+
+    this.lightTextures = this.extractTexturesFromSheet(lightSheet, "light_");
+    this.darkTextures = this.extractTexturesFromSheet(darkSheetOrNull, "dark_")
+  }
+
+  private applyThemeTextures(useDarkMode: boolean): void {
+    const selectedTextures = useDarkMode ? this.darkTextures : this.lightTextures;
+
+    if (!selectedTextures) {
+      throw new Error("Theme textures are not initialized");
+    }
+
+    this.textures = {
+      default: selectedTextures.default,
+      mine: selectedTextures.mine,
+      flag: selectedTextures.flag,
+      numbers: [...selectedTextures.numbers]
+    };
+  }
+
+  private bindDarkModePreference(): void {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    this.darkModeQuery = query;
+    this.prefersDarkMode = query.matches;
+    query.addEventListener("change", this.handleDarkModePreferenceChange);
+  }
+
+  private unbindDarkModePreference(): void {
+    if (!this.darkModeQuery) {
+      return;
+    }
+
+    this.darkModeQuery.removeEventListener("change", this.handleDarkModePreferenceChange);
+    this.darkModeQuery = null;
+  }
+
+  private applyThemeMode(enabled: boolean): void {
+    if (this.prefersDarkMode === enabled) {
+      return;
+    }
+
+    this.prefersDarkMode = enabled;
+    this.applyThemeTextures(enabled);
+    this.refreshVisibleSpriteTextures();
+  }
+
+  private refreshVisibleSpriteTextures(): void {
+    if (this.cols === 0) {
+      return;
+    }
+
+    for (let i = 0; i < this.poolAssignments.length; i++) {
+      const tileIndex = this.poolAssignments[i];
+      if (tileIndex == null) {
+        continue;
+      }
+
+      const y = Math.floor(tileIndex / this.cols);
+      const x = tileIndex % this.cols;
+      const tileType = this.tileTypes[y]?.[x];
+
+      if (tileType === undefined) {
+        continue;
+      }
+
+      this.spritePool[i]!.texture = this.resolveTextureForTileType(tileType);
+    }
   }
 
   private resolveTextureForTileType(type: TileType): Texture {
@@ -204,10 +307,21 @@ export default class BoardRenderer {
       sprite.width = this.tileSize;
       sprite.height = this.tileSize;
       sprite.visible = false;
+      sprite.eventMode = "static";
+      sprite.cullable = true;
+      sprite.cursor = "default";
       this.spritePool.push(sprite);
       this.poolAssignments.push(null);
       this.container.addChild(sprite);
     }
+  }
+
+  private resolveCursorForTileType(type: TileType): string {
+    if (type === TileType.HIDDEN || type === TileType.FLAGGED) {
+      return "pointer";
+    }
+
+    return "default";
   }
 
   private hideAllPoolSprites(): void {

@@ -1,4 +1,4 @@
-import { Application } from "pixi.js";
+import { Application, Rectangle } from "pixi.js";
 import { TileUpdate ,GameState, TileType, type ServerMessage, type TileCoordinates } from "@saper/contracts";
 import log from "~/utils/logger";
 import BoardRenderer from "./boardRenderer";
@@ -85,11 +85,14 @@ export default class GameController {
       width: 1,
       height: 1,
       autoDensity: true,
-      backgroundAlpha: 0
+      backgroundAlpha: 0,
+      resizeTo: window
     });
 
     await this.boardRenderer.init(this.app);
     this.boardRenderer.container.eventMode = "static";
+    this.app.stage.eventMode = "static";
+    this.app.stage.hitArea = new Rectangle(0, 0, 1, 1);
 
     const joinGameResponse = await this.wsClient.joinGame(
       {
@@ -101,6 +104,7 @@ export default class GameController {
     this.gameId = joinGameResponse.gameId;
     this.playerId = joinGameResponse.playerId;
 
+    this.app.canvas.addEventListener("contextmenu", this.handleCanvasContextMenu);
     this.app.canvas.addEventListener("mousedown", this.mouseInputHandler.handleCanvasMouseDown);
     this.app.canvas.addEventListener("touchstart", this.touchInputHandler.handleCanvasTouchStart, { passive: false });
     this.app.canvas.addEventListener("touchmove", this.touchInputHandler.handleCanvasTouchMove, { passive: false });
@@ -438,6 +442,14 @@ export default class GameController {
     const canvasX = normalizedX * scaleX;
     const canvasY = normalizedY * scaleY;
 
+    return this.resolveTileFromCanvasPoint(canvasX, canvasY);
+  }
+
+  private resolveTileFromCanvasPoint(canvasX: number, canvasY: number): TileCoordinates | null {
+    if (canvasX < 0 || canvasY < 0 || canvasX > this.app.renderer.width || canvasY > this.app.renderer.height) {
+      return null;
+    }
+
     const { zoom } = this.viewportController.getState();
     const { x: horizontalOffset, y: verticalOffset } = this.resolveBoardOffsets(zoom);
     const localX = canvasX - horizontalOffset;
@@ -488,6 +500,14 @@ export default class GameController {
     const canvasX = normalizedX * scaleX;
     const canvasY = normalizedY * scaleY;
 
+    this.zoomViewportAtCanvasPoint(canvasX, canvasY, scaleFactor);
+  }
+
+  private zoomViewportAtCanvasPoint(canvasX: number, canvasY: number, scaleFactor: number): void {
+    if (canvasX < 0 || canvasY < 0 || canvasX > this.app.renderer.width || canvasY > this.app.renderer.height) {
+      return;
+    }
+
     this.viewportController.zoomAtScreenPoint(
       scaleFactor,
       canvasX,
@@ -522,6 +542,10 @@ export default class GameController {
     this.zoomViewportAtClientPoint(event.clientX, event.clientY, factor);
   };
 
+  private handleCanvasContextMenu = (event: MouseEvent): void => {
+    event.preventDefault();
+  };
+
   private handleWindowResize = (): void => {
     this.updateViewportFromContainer(false, false);
   };
@@ -532,6 +556,7 @@ export default class GameController {
     const height = Math.floor(parent?.clientHeight ?? window.innerHeight);
 
     this.app.renderer.resize(width, height);
+    this.app.stage.hitArea = new Rectangle(0, 0, width, height);
 
     this.viewportController.setViewportSize(width, height);
 
@@ -550,6 +575,8 @@ export default class GameController {
       horizontalOffset - cameraX * zoom,
       verticalOffset - cameraY * zoom
     );
+    this.boardRenderer.container.cullable = true;
+    this.boardRenderer.container.cullableChildren = true;
 
     this.boardRenderer.updateVisibleWorld(
       this.resolveVisibleWorld(cameraX, cameraY, zoom, horizontalOffset, verticalOffset)
@@ -600,6 +627,7 @@ export default class GameController {
 
   cleanup(): void {
     log.info("[client] Cleaning up game instance.");
+    this.app.canvas.removeEventListener("contextmenu", this.handleCanvasContextMenu);
     this.app.canvas.removeEventListener("mousedown", this.mouseInputHandler.handleCanvasMouseDown);
     this.app.canvas.removeEventListener("touchstart", this.touchInputHandler.handleCanvasTouchStart);
     this.app.canvas.removeEventListener("touchmove", this.touchInputHandler.handleCanvasTouchMove);
@@ -616,10 +644,11 @@ export default class GameController {
     this.touchInputHandler.reset();
     this.boardRenderer.clearPlayerCursors();
     this.playerId = 0;
-    this.app.ticker.stop();
+    this.app.stop();
     this.boardRenderer.destroy();
     this.app.stage.removeChildren();
     this.app.renderer.render({ container: this.app.stage });
+    this.app.destroy();
     this.initialized = false;
   }
 }
