@@ -1,5 +1,7 @@
-import { createConsola } from "consola";
+import { createConsola, LogLevels } from "consola";
 
-const log = createConsola();
+const log = createConsola({
+//   level: LogLevels.debug,
+});
 
 export default log;

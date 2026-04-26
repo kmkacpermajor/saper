@@ -104,6 +104,14 @@ export default class TouchInputHandler {
   };
 
   handleCanvasTouchMove = (event: TouchEvent): void => {
+    log.debug("[client] Touch move", {
+      touchCount: event.touches.length,
+      pinchActive: this.pinchActive, 
+      panActive: this.panActive,
+      touchGestureTile: this.touchGestureTile,
+      touchStartClientPoint: this.touchStartClientPoint,
+      panLastPoint: this.panLastPoint
+    });
     if (event.touches.length === 2) {
       const firstTouch = event.touches[0];
       const secondTouch = event.touches[1];
@@ -158,7 +166,8 @@ export default class TouchInputHandler {
     const movedDistance = Math.hypot(touch.clientX - startPoint.x, touch.clientY - startPoint.y);
     if (movedDistance > TOUCH_MOVE_TOLERANCE_PX) {
       if (!this.panActive) {
-        this.cancelTouchGesture(true);
+        // this.cancelTouchGesture(true);
+        this.clearTouchLongPressTimer();
       }
       this.panActive = true;
     }

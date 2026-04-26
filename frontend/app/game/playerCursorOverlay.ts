@@ -11,6 +11,7 @@ export default class PlayerCursorOverlay {
     this.tileSize = tileSize;
     this.container.eventMode = "none";
     this.container.sortableChildren = false;
+    this.container.cacheAsTexture(true); // TODO: probably should redo it as a sprite and use tint
   }
 
   private drawCornerPath(

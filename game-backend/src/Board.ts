@@ -113,20 +113,17 @@ export default class Board {
     }
 
     const tilesToReveal: TileUpdate[] = [];
-    const queueY: number[] = [y];
-    const queueX: number[] = [x];
+    const startIndex = y * this.cols + x;
+    const queue: number[] = [startIndex];
     const enqueued = new Uint8Array(this.rows * this.cols);
     enqueued[y * this.cols + x] = 1;
     let head = 0;
 
-    while (head < queueY.length) {
-      const cy = queueY[head];
-      const cx = queueX[head];
+    while (head < queue.length) {
+      const index = queue[head];
+      const cy = Math.floor(index / this.cols);
+      const cx = index % this.cols;
       head++;
-
-      if (cy < 0 || cy >= this.rows || cx < 0 || cx >= this.cols || this.board[cy][cx].isRevealed || this.board[cy][cx].isFlagged) {
-        continue;
-      }
 
       this.board[cy][cx].isRevealed = true;
       tilesToReveal.push({ y: cy, x: cx, type: this.board[cy][cx].getType() });
@@ -152,8 +149,7 @@ export default class Board {
               }
 
               enqueued[nextIndex] = 1;
-              queueY.push(ny);
-              queueX.push(nx);
+              queue.push(nextIndex);
             }
           }
         }

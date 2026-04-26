@@ -44,6 +44,13 @@ export default class BoardRenderer {
   }
 
   async init(app: Application): Promise<void> {
+    await app.init({
+      width: 1,
+      height: 1,
+      autoDensity: true,
+      backgroundAlpha: 0,
+    });
+
     this.bindDarkModePreference();
     await this.preloadThemeTextures();
     this.applyThemeTextures(this.prefersDarkMode);
@@ -95,7 +102,8 @@ export default class BoardRenderer {
 
       const sprite = this.spritePool[poolIndex]!;
       sprite.texture = this.resolveTextureForTileType(tile.type);
-      sprite.cursor = this.resolveCursorForTileType(tile.type);
+      sprite.interactiveChildren = false;
+      sprite.cullable = true;
     }
   }
 
@@ -137,7 +145,9 @@ export default class BoardRenderer {
         sprite.x = x * this.tileSize;
         sprite.y = y * this.tileSize;
         sprite.texture = this.resolveTextureForTileType(tileType);
-        sprite.cursor = this.resolveCursorForTileType(tileType);
+        sprite.cursor = 'pointer';
+        sprite.cullable = true;
+        sprite.interactiveChildren = false;
 
         this.poolAssignments[poolCursor] = tileIndex;
         this.tileToPoolIndex.set(tileIndex, poolCursor);
@@ -308,20 +318,11 @@ export default class BoardRenderer {
       sprite.height = this.tileSize;
       sprite.visible = false;
       sprite.eventMode = "static";
-      sprite.cullable = true;
       sprite.cursor = "default";
       this.spritePool.push(sprite);
       this.poolAssignments.push(null);
       this.container.addChild(sprite);
     }
-  }
-
-  private resolveCursorForTileType(type: TileType): string {
-    if (type === TileType.HIDDEN || type === TileType.FLAGGED) {
-      return "pointer";
-    }
-
-    return "default";
   }
 
   private hideAllPoolSprites(): void {

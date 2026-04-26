@@ -30,8 +30,6 @@ export default class GameController {
   private cols: number = 0;
   private initialNumBombs: number = 0;
   private gameId: number = 0;
-  private resizeObserver: ResizeObserver | null = null;
-  private observedCanvasParent: HTMLElement | null = null;
 
   app = new Application();
 
@@ -80,14 +78,6 @@ export default class GameController {
     if (this.initialized) {
       return;
     }
-
-    await this.app.init({
-      width: 1,
-      height: 1,
-      autoDensity: true,
-      backgroundAlpha: 0,
-      resizeTo: window
-    });
 
     await this.boardRenderer.init(this.app);
     this.boardRenderer.container.eventMode = "static";
@@ -199,14 +189,7 @@ export default class GameController {
     this.boardRenderer.setupBoard(rows, cols);
     this.boardRenderer.clearPlayerCursors();
     this.viewportController.setWorldSize(this.cols * this.tileSize, this.rows * this.tileSize);
-    this.updateViewportFromContainer(true, true);
-
-    // The canvas may be attached to DOM after connect resolves.
-    setTimeout(() => {
-      if (this.initialized) {
-        this.updateViewportFromContainer(true, true);
-      }
-    }, 0);
+    this.updateViewportFromContainer(true);
   }
 
   applyRevealTiles(tiles: ReadonlyArray<TileUpdate>): void {
@@ -257,7 +240,7 @@ export default class GameController {
     this.boardRenderer.setupBoard(this.rows, this.cols);
     this.boardRenderer.clearPlayerCursors();
     this.viewportController.setWorldSize(this.cols * this.tileSize, this.rows * this.tileSize);
-    this.updateViewportFromContainer(true, true);
+    this.updateViewportFromContainer(true);
 
     this.gameState = GameState.IN_PROGRESS;
     this.numBombs = this.initialNumBombs;
@@ -272,6 +255,9 @@ export default class GameController {
   }
 
   revealTile(tile: TileCoordinates): void {
+    // prerender as empty, fill when response comes
+    this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: TileType.EMPTY }]);
+
     this.wsClient.sendCursorClick(tile);
     this.wsClient.revealTiles([tile]);
   }
@@ -281,6 +267,8 @@ export default class GameController {
     if (tileType !== TileType.HIDDEN && tileType !== TileType.FLAGGED) {
       return;
     }
+    // prerender as toggled, fill when response comes
+    this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: tileType === TileType.FLAGGED ? TileType.HIDDEN : TileType.FLAGGED }]);
 
     this.wsClient.sendCursorClick(tile);
     this.wsClient.flagTile(tile, tileType === TileType.FLAGGED);
@@ -531,10 +519,6 @@ export default class GameController {
     this.zoomViewportAtClientPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, scaleFactor);
   }
 
-  syncViewportToContainer(fitToViewport = false): void {
-    this.updateViewportFromContainer(fitToViewport, false);
-  }
-
   private handleCanvasWheel = (event: WheelEvent): void => {
     event.preventDefault();
 
@@ -547,13 +531,15 @@ export default class GameController {
   };
 
   private handleWindowResize = (): void => {
-    this.updateViewportFromContainer(false, false);
+    this.viewportController.centerAtCurrentZoom(); //TODO: we shouldn't have to do this, but i don't understand why tile resolving gets messed up after resize without it
+    this.updateViewportFromContainer(true);
   };
 
-  private updateViewportFromContainer(fitToViewport: boolean, preferCloserStart: boolean): void {
-    const parent = this.app.canvas.parentElement;
-    const width = Math.floor(parent?.clientWidth ?? window.innerWidth);
-    const height = Math.floor(parent?.clientHeight ?? window.innerHeight);
+  updateViewportFromContainer(fitToViewport: boolean): void {
+    // const parent = this.app.canvas.parentElement;
+    const parent = document.getElementById('gameCanvasContainer');
+    const width = parent?.clientWidth ?? 0;
+    const height = parent?.clientHeight ?? 0;
 
     this.app.renderer.resize(width, height);
     this.app.stage.hitArea = new Rectangle(0, 0, width, height);
@@ -561,7 +547,7 @@ export default class GameController {
     this.viewportController.setViewportSize(width, height);
 
     if (fitToViewport) {
-      this.viewportController.fitToViewport(0.96, preferCloserStart ? this.minInitialZoom : 0);
+      this.viewportController.fitToViewport(0.96, 1.0);
     }
 
     this.applyViewportTransform();
@@ -637,17 +623,11 @@ export default class GameController {
     window.removeEventListener("mouseup", this.mouseInputHandler.handleWindowMouseUp);
     window.removeEventListener("mousemove", this.mouseInputHandler.handleWindowMouseMove);
     window.removeEventListener("resize", this.handleWindowResize);
-    this.resizeObserver?.disconnect();
-    this.resizeObserver = null;
-    this.observedCanvasParent = null;
     this.mouseInputHandler.reset();
     this.touchInputHandler.reset();
     this.boardRenderer.clearPlayerCursors();
     this.playerId = 0;
-    this.app.stop();
     this.boardRenderer.destroy();
-    this.app.stage.removeChildren();
-    this.app.renderer.render({ container: this.app.stage });
     this.app.destroy();
     this.initialized = false;
   }

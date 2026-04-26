@@ -74,7 +74,6 @@ export const useGameSession = () => {
       gameController.value = controller;
 
       container.appendChild(controller.app.canvas);
-      controller.syncViewportToContainer(true);
 
       currentGameState.value = GameState.IN_PROGRESS;
     } catch (err: unknown) {
@@ -99,10 +98,6 @@ export const useGameSession = () => {
     gameController.value?.zoomViewportAtCanvasCenter(0.88);
   };
 
-  const fitViewport = (): void => {
-    gameController.value?.fitViewport();
-  };
-
   const centerViewport = (): void => {
     gameController.value?.centerViewport();
   };
@@ -112,7 +107,6 @@ export const useGameSession = () => {
     disconnect,
     zoomIn,
     zoomOut,
-    fitViewport,
     centerViewport,
     gameRunning,
     currentGameState,
