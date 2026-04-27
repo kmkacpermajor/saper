@@ -46,7 +46,7 @@ export default class Game {
         }
         this.board = new Board(this.rows, this.cols, this.numBombs);
         let retries = 0;
-        while (retries < 20 && this.board.board[y][x].adjacentMines !== 0) {
+        while (retries < 50 && this.board.board[y][x].adjacentMines !== 0) {
             this.board = new Board(this.rows, this.cols, this.numBombs);
             retries++;
         }

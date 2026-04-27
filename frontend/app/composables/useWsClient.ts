@@ -41,26 +41,6 @@ class WsClient {
 	private onServerMessage: ((message: ServerMessage) => void) | undefined;
 	private pendingHandshake: PendingHandshake | undefined;
 
-	async createGame(
-		request: CreateGameRequest,
-		onServerMessage?: (message: ServerMessage) => void
-	): Promise<ConnectResponse> {
-		await this.connectSocket(onServerMessage);
-		const handshakePromise = this.beginHandshake();
-		this.send(createGamePayload(request));
-		return await handshakePromise;
-	}
-
-	async joinGame(
-		request: JoinGameRequest,
-		onServerMessage?: (message: ServerMessage) => void
-	): Promise<ConnectResponse> {
-		await this.connectSocket(onServerMessage);
-		const handshakePromise = this.beginHandshake();
-		this.send(joinGamePayload(request));
-		return await handshakePromise;
-	}
-
 	private async connectSocket(onServerMessage?: (message: ServerMessage) => void): Promise<void> {
 		this.disconnect();
 		if (!this.wsUrl) {
@@ -73,6 +53,26 @@ class WsClient {
 
 		this.socket.binaryType = "arraybuffer";
 		this.setupSocketHandlers();
+	}
+
+	async sendCreateGame(
+		request: CreateGameRequest,
+		onServerMessage?: (message: ServerMessage) => void
+	): Promise<ConnectResponse> {
+		await this.connectSocket(onServerMessage);
+		const handshakePromise = this.beginHandshake();
+		this.send(createGamePayload(request));
+		return await handshakePromise;
+	}
+
+	async sendJoinGame(
+		request: JoinGameRequest,
+		onServerMessage?: (message: ServerMessage) => void
+	): Promise<ConnectResponse> {
+		await this.connectSocket(onServerMessage);
+		const handshakePromise = this.beginHandshake();
+		this.send(joinGamePayload(request));
+		return await handshakePromise;
 	}
 
 	disconnect(): void {
@@ -142,7 +142,7 @@ class WsClient {
 		reject(reason);
 	}
 
-	revealTiles(tiles: TileCoordinates[]): void {
+	sendRevealTiles(tiles: TileCoordinates[]): void {
 		if (tiles.length === 0) {
 			return;
 		}
@@ -150,7 +150,7 @@ class WsClient {
 		this.send(createRevealTilePayload(tiles));
 	}
 
-	flagTile(tile: TileCoordinates, unflag: boolean): void {
+	sendFlagTile(tile: TileCoordinates, unflag: boolean): void {
 		this.send(createFlagTilePayload(tile.y, tile.x, unflag));
 	}
 

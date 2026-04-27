@@ -2,12 +2,6 @@ import type { CreateGameRequest } from "@saper/contracts";
 
 type SetupConnectionType = "create" | "join";
 
-type CreateGameInput = {
-  rows: number;
-  cols: number;
-  numBombs: number;
-};
-
 export const useRouteGameConnection = () => {
   const route = useRoute();
   const router = useRouter();
@@ -38,13 +32,9 @@ export const useRouteGameConnection = () => {
     } finally {
       loadingIndicator.finish();
     }
-
-    if (!gameSession.gameRunning.value) {
-      await redirectToIndexWithError("Game connection did not start.");
-    }
   };
 
-  const connectFromSetup = async (input: CreateGameInput): Promise<void> => {
+  const connectFromSetup = async (request: CreateGameRequest): Promise<void> => {
     if (connecting.value) {
       return;
     }
@@ -54,13 +44,7 @@ export const useRouteGameConnection = () => {
 
     try {
       if (connectionType.value === "create") {
-        const request: CreateGameRequest = {
-          rows: input.rows,
-          cols: input.cols,
-          numBombs: input.numBombs
-        };
-
-        const connectResponse = await wsClient.createGame(request);
+        const connectResponse = await wsClient.sendCreateGame(request);
         await router.push(`/${connectResponse.gameId}`);
       } else {
         await router.push(`/${gameId.value}`);

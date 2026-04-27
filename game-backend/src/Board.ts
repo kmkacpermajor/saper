@@ -1,5 +1,6 @@
-import type { TileUpdate } from "@saper/contracts";
+import type { TileCoordinates, TileUpdate } from "@saper/contracts";
 import Tile from "./Tile.js";
+import { create } from "node:domain";
 
 export default class Board {
   rows: number;
@@ -12,7 +13,7 @@ export default class Board {
   numOfUnrevealedTiles: number;
   numOfFlaggedTiles: number;
 
-  constructor(rows: number, cols: number, numBombs: number) {
+  constructor(rows: number, cols: number, numBombs: number, firstTile: TileCoordinates) {
     this.rows = rows;
     this.cols = cols;
     this.numBombs = numBombs;
@@ -23,7 +24,7 @@ export default class Board {
     this.numOfUnrevealedTiles = rows * cols;
     this.numOfFlaggedTiles = 0;
 
-    this.createBoard();
+    this.createBoard(firstTile);
   }
 
   flagTile(y: number, x: number): void {
@@ -52,46 +53,82 @@ export default class Board {
     return sum;
   }
 
-  private countAdjacentMines(y: number, x: number): number {
-    let count = 0;
-    for (let dy = -1; dy <= 1; dy++) {
-      for (let dx = -1; dx <= 1; dx++) {
-        if (dy === 0 && dx === 0) {
-          continue;
-        }
-        const ny = y + dy;
-        const nx = x + dx;
-        if (ny >= 0 && nx >= 0 && ny < this.rows && nx < this.cols && this.board[ny][nx].isMine) {
-          count++;
-        }
+  /**
+   * Places mines using an optimized Partial Fisher-Yates Shuffle,
+   * guaranteeing a safe 3x3 zone around the first click.
+   */
+  private placeMines(tile: TileCoordinates): void {
+      
+      const pool: TileCoordinates[] = [];
+
+      // 1. Generate pool, excluding the 3x3 safe zone around the starting click
+      for (let x = 0; x < this.cols; x++) {
+          for (let y = 0; y < this.rows; y++) {
+              const isSafeZone = Math.abs(y - tile.y) <= 1 && Math.abs(x - tile.x) <= 1;
+              if (!isSafeZone) {
+                  pool.push({ x, y });
+              }
+          }
       }
-    }
-    return count;
+
+      // Safety check for impossible board configurations
+      if (this.numBombs > pool.length) {
+          throw new Error("Too many bombs for this board size while preserving a safe start zone.");
+      }
+
+      // 2. Partial Fisher-Yates Shuffle
+      // We only loop 'numBombs' times instead of shuffling the whole pool.
+      for (let i = 0; i < this.numBombs; i++) {
+          const randomIndex = i + Math.floor(Math.random() * (pool.length - i));
+          
+          // Swap the current element with the random element
+          [pool[i], pool[randomIndex]] = [pool[randomIndex], pool[i]];
+          
+          // The item at index 'i' is now a guaranteed random, unique mine location
+          const { x, y } = pool[i];
+          this.board[y][x].isMine = true;
+      }
   }
 
-  private createBoard(): void {
+  /**
+   * Calculates the numbers for all non-mine cells.
+   */
+  private countAdjacentMines(): void {
+      const directions = [
+          [-1, -1], [-1, 0], [-1, 1],
+          [0, -1],           [0, 1],
+          [1, -1],  [1, 0],  [1, 1]
+      ];
+
+      for (let x = 0; x < this.rows; x++) {
+          for (let y = 0; y < this.cols; y++) {
+              if (this.board[x][y].isMine) continue;
+
+              let count = 0;
+              for (const [dx, dy] of directions) {
+                  const nx = x + dx;
+                  const ny = y + dy;
+
+                  // Check bounds and count mines
+                  if (nx >= 0 && nx < this.rows && ny >= 0 && ny < this.cols) {
+                      if (this.board[nx][ny].isMine) {
+                          count++;
+                      }
+                  }
+              }
+              this.board[x][y].adjacentMines = count;
+          }
+      }
+  }
+
+  private createBoard(firstTile: TileCoordinates): void {
     this.board = Array.from({ length: this.rows }, () =>
-      Array.from({ length: this.cols }, () => new Tile())
-    );
+        Array.from({ length: this.cols }, () => new Tile())
+      );
 
-    let minesPlaced = 0;
-    while (minesPlaced < this.numBombs) {
-      const y = Math.floor(Math.random() * this.rows);
-      const x = Math.floor(Math.random() * this.cols);
-      if (!this.board[y][x].isMine) {
-        this.board[y][x].isMine = true;
-        this.bombCoords.push({ y, x });
-        minesPlaced++;
-      }
-    }
+    this.placeMines(firstTile);
+    this.countAdjacentMines();
 
-    for (let y = 0; y < this.rows; y++) {
-      for (let x = 0; x < this.cols; x++) {
-        if (!this.board[y][x].isMine) {
-          this.board[y][x].adjacentMines = this.countAdjacentMines(y, x);
-        }
-      }
-    }
   }
 
   tilesToReveal(y: number, x: number): TileUpdate[] | undefined {

@@ -47,7 +47,9 @@ export default class MessageSender {
           rows: game.rows,
           cols: game.cols,
           numBombs: game.numBombs,
-          playerId
+          playerId,
+          difficulty: game.difficulty,
+          boardSize: game.boardSize
         }
       }
     });

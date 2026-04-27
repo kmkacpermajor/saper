@@ -1,5 +1,5 @@
 import { Application, Rectangle } from "pixi.js";
-import { TileUpdate ,GameState, TileType, type ServerMessage, type TileCoordinates } from "@saper/contracts";
+import { TileUpdate ,GameState, TileType, type ServerMessage, type TileCoordinates, BoardSize, Difficulty } from "@saper/contracts";
 import log from "~/utils/logger";
 import BoardRenderer from "./boardRenderer";
 import { GAME_EVENT_TYPE, type GameEvent } from "./gameEvents";
@@ -30,6 +30,8 @@ export default class GameController {
   private cols: number = 0;
   private initialNumBombs: number = 0;
   private gameId: number = 0;
+  private difficulty: Difficulty = 0;
+  private boardSize: BoardSize = 0;
 
   app = new Application();
 
@@ -84,15 +86,12 @@ export default class GameController {
     this.app.stage.eventMode = "static";
     this.app.stage.hitArea = new Rectangle(0, 0, 1, 1);
 
-    const joinGameResponse = await this.wsClient.joinGame(
+    const joinGameResponse = await this.wsClient.sendJoinGame(
       {
         requestedGameId
       },
       this.handleReceivedServerMessage
     );
-
-    this.gameId = joinGameResponse.gameId;
-    this.playerId = joinGameResponse.playerId;
 
     this.app.canvas.addEventListener("contextmenu", this.handleCanvasContextMenu);
     this.app.canvas.addEventListener("mousedown", this.mouseInputHandler.handleCanvasMouseDown);
@@ -111,9 +110,7 @@ export default class GameController {
     switch (message.payload.oneofKind) {
       case "connect": {
         const payload = message.payload.connect;
-        const playerId =
-          "playerId" in payload && typeof payload.playerId === "number" ? payload.playerId : 0;
-        this.applyConnected(payload.gameId, playerId, payload.rows, payload.cols, payload.numBombs);
+        this.applyConnected(payload.gameId, payload.playerId, payload.rows, payload.cols, payload.numBombs, payload.difficulty, payload.boardSize);
         return;
       }
 
@@ -177,7 +174,7 @@ export default class GameController {
     }
   };
 
-  applyConnected(gameId: number, playerId: number, rows: number, cols: number, bombs: number): void {
+  applyConnected(gameId: number, playerId: number, rows: number, cols: number, bombs: number, difficulty: Difficulty, boardSize: BoardSize): void {
     this.gameId = gameId;
     this.playerId = playerId;
     this.rows = rows;
@@ -185,6 +182,8 @@ export default class GameController {
     this.boardState = this.initializeBoard(rows, cols);
     this.numBombs = bombs;
     this.initialNumBombs = bombs;
+    this.difficulty = difficulty;
+    this.boardSize = boardSize;
 
     this.boardRenderer.setupBoard(rows, cols);
     this.boardRenderer.clearPlayerCursors();
@@ -259,7 +258,7 @@ export default class GameController {
     this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: TileType.EMPTY }]);
 
     this.wsClient.sendCursorClick(tile);
-    this.wsClient.revealTiles([tile]);
+    this.wsClient.sendRevealTiles([tile]);
   }
 
   toggleFlag(tile: TileCoordinates): void {
@@ -271,7 +270,7 @@ export default class GameController {
     this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: tileType === TileType.FLAGGED ? TileType.HIDDEN : TileType.FLAGGED }]);
 
     this.wsClient.sendCursorClick(tile);
-    this.wsClient.flagTile(tile, tileType === TileType.FLAGGED);
+    this.wsClient.sendFlagTile(tile, tileType === TileType.FLAGGED);
   }
 
   tryChordReveal(centerTile: TileCoordinates): boolean {
@@ -302,7 +301,7 @@ export default class GameController {
         hiddenNeighborsCount: hiddenNeighbors.length
       });
       this.wsClient.sendCursorClick(centerTile);
-      this.wsClient.revealTiles(hiddenNeighbors);
+      this.wsClient.sendRevealTiles(hiddenNeighbors);
       return true;
     }
 
@@ -627,8 +626,8 @@ export default class GameController {
     this.touchInputHandler.reset();
     this.boardRenderer.clearPlayerCursors();
     this.playerId = 0;
+    // this.app.destroy();
     this.boardRenderer.destroy();
-    this.app.destroy();
     this.initialized = false;
   }
 }

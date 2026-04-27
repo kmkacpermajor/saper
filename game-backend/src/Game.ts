@@ -1,4 +1,4 @@
-import { GameState, TileType, type TileCoordinates, type TileUpdate } from "@saper/contracts";
+import { BoardSize, Difficulty, GameState, TileType, type TileCoordinates, type TileUpdate } from "@saper/contracts";
 import type { WebSocket } from "ws";
 import Board from "./Board.js";
 import MessageSender from "./MessageSender.js";
@@ -7,26 +7,15 @@ import PlayerIdentityRegistry from "./PlayerIdentityRegistry.js";
 const MAX_ZERO_START_RETRIES = 8;
 
 export default class Game {
-  readonly gameId: number;
-  readonly rows: number;
-  readonly cols: number;
-  readonly numBombs: number;
   readonly messageSender: MessageSender;
-
-  private readonly playerIdentityRegistry: PlayerIdentityRegistry;
-  private readonly playerCursorPositions: Map<number, TileCoordinates>;
+  private readonly playerIdentityRegistry: PlayerIdentityRegistry = new PlayerIdentityRegistry();
+  private readonly playerCursorPositions: Map<number, TileCoordinates> = new Map<number, TileCoordinates>();
 
   board: Board | null = null;
   gameStartTime: number | null = null;
 
-  constructor(gameId: number, rows: number, cols: number, numBombs: number, onAllClientsDisconnected: () => void) {
-    this.gameId = gameId;
-    this.rows = rows;
-    this.cols = cols;
-    this.numBombs = numBombs;
+  constructor(readonly gameId: number, readonly rows: number, readonly cols: number, readonly numBombs: number, readonly difficulty: Difficulty, readonly boardSize: BoardSize, onAllClientsDisconnected: () => void) {
     this.messageSender = new MessageSender(onAllClientsDisconnected);
-    this.playerIdentityRegistry = new PlayerIdentityRegistry();
-    this.playerCursorPositions = new Map<number, TileCoordinates>();
   }
 
   registerPlayer(ws: WebSocket): number {
@@ -99,20 +88,6 @@ export default class Game {
     }
   }
 
-  private ensureBoardForFirstMove(y: number, x: number): void {
-    this.board = new Board(this.rows, this.cols, this.numBombs);
-    // Prefer a zero-adjacent first tile, but cap retries to prevent stalls on large boards.
-    let retries = 0;
-    while (retries < MAX_ZERO_START_RETRIES && this.board.board[y][x].adjacentMines !== 0) {
-      this.board = new Board(this.rows, this.cols, this.numBombs);
-      retries++;
-    }
-
-    while (this.board.board[y][x].isMine) {
-      this.board = new Board(this.rows, this.cols, this.numBombs);
-    }
-  }
-
   private checkGameWinCondition(): boolean {
     if (!this.board) {
       return false;
@@ -129,7 +104,7 @@ export default class Game {
     const firstMove = this.board === null;
 
     if (firstMove) {
-      this.ensureBoardForFirstMove(tiles[0].y, tiles[0].x);
+      this.board = new Board(this.rows, this.cols, this.numBombs, tiles[0]);
     }
     
 

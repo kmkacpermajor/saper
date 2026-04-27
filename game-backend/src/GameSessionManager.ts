@@ -1,5 +1,6 @@
 import type { WebSocket } from "ws";
 import Game from "./Game.js";
+import { BoardSize, Difficulty } from "@saper/contracts";
 
 const MAX_GAME_ID = 255;
 const MAX_BOMB_DENSITY = 0.35;
@@ -14,20 +15,32 @@ const GAME_PARK_TTL_MS =
 export default class GameSessionManager {
   private readonly games: Map<number, Game>;
   private readonly cleanupTimers: Map<number, ReturnType<typeof setTimeout>>;
+  private readonly boardSizeMap: Record<BoardSize, { rows: number; cols: number }>;
+  private readonly difficultyMap: Record<Difficulty, { bombPercentage: number }>;
 
   constructor() {
     this.games = new Map<number, Game>();
     this.cleanupTimers = new Map<number, ReturnType<typeof setTimeout>>();
+    this.boardSizeMap = {
+      [BoardSize.SMALL]: { rows: 15, cols: 15 },
+      [BoardSize.MEDIUM]: { rows: 40, cols: 40 },
+      [BoardSize.BIG]: { rows: 100, cols: 100 },
+      [BoardSize.HUGE]: { rows: 300, cols: 300 },
+      [BoardSize.CUSTOM]: { rows: 0, cols: 0 },
+    };
+    this.difficultyMap = {
+      [Difficulty.EASY]: { bombPercentage: 0.05 },
+      [Difficulty.INTERMEDIATE]: { bombPercentage: 0.15 },
+      [Difficulty.HARD]: { bombPercentage: 0.3 },
+      [Difficulty.EXPERT]: { bombPercentage: 0.5 },
+      [Difficulty.CUSTOM]: { bombPercentage: 0.0 },
+    };
   }
 
   private validateConfig(rows: number, cols: number, numBombs: number): string | null {
     if (rows < 5 || cols < 5) {
       return "Board size must be at least 5x5.";
     }
-
-    // if (rows > 30 || cols > 30) {
-    //   return "Board size must not exceed 30x30.";
-    // }
 
     const boardArea = rows * cols;
     const minBombs = Math.max(1, Math.floor(boardArea * MIN_BOMB_DENSITY));
@@ -73,15 +86,19 @@ export default class GameSessionManager {
     this.cleanupTimers.set(gameId, cleanupTimeout);
   }
 
-  createNewGame(rows: number, cols: number, numBombs: number): { game: Game | null; error: string | null } {
-    const validationError = this.validateConfig(rows, cols, numBombs);
+  createNewGame(difficulty: Difficulty, boardSize: BoardSize, customRows: number, customCols: number, customNumBombs: number): { game: Game | null; error: string | null } {
+    const validationError = this.validateConfig(customRows, customCols, customNumBombs);
     if (validationError) {
       return { game: null, error: validationError };
     }
 
+    // TODO: just generate id
     for (let gameId = 0; gameId <= MAX_GAME_ID; gameId++) {
       if (!this.games.has(gameId)) {
-        const game = new Game(gameId, rows, cols, numBombs, () => this.scheduleCleanup(gameId));
+        const rows = boardSize === BoardSize.CUSTOM ? customRows : this.boardSizeMap[boardSize].rows;
+        const cols = boardSize === BoardSize.CUSTOM ? customCols : this.boardSizeMap[boardSize].cols;
+        const numBombs = boardSize === BoardSize.CUSTOM ? customNumBombs : Math.floor(rows * cols * this.difficultyMap[difficulty].bombPercentage);
+        const game = new Game(gameId, rows, cols, numBombs, difficulty, boardSize, () => this.scheduleCleanup(gameId));
         this.games.set(gameId, game);
         return { game, error: null };
       }

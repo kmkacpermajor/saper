@@ -48,6 +48,8 @@ export const useGameSession = () => {
       return;
     }
 
+    console.log("Destroying game controller...");
+
     gameController.value.cleanup();
     gameController.value = null;
   };

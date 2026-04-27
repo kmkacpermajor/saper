@@ -1,8 +1,9 @@
-import { CONTRACT_VERSION, GameState, decodeClientMessage, encodeServerMessage } from "@saper/contracts";
+import { BoardSize, CONTRACT_VERSION, Difficulty, GameState, decodeClientMessage, encodeServerMessage } from "@saper/contracts";
 import type { RawData, WebSocket } from "ws";
 import type Game from "./Game.js";
 import type GameSessionManager from "./GameSessionManager.js";
 import { logger } from "./logger.js";
+import { create } from "node:domain";
 
 const toUint8Array = (message: RawData): Uint8Array => {
   if (message instanceof Buffer) {
@@ -115,10 +116,12 @@ export default class MessageReceiver {
     switch (decodedMessage.payload.oneofKind) {
       case "createGame": {
         const createPayload = decodedMessage.payload.createGame;
+
         logger.debug(
-          `[server] Create game request: rows=${createPayload.rows}, cols=${createPayload.cols}, bombs=${createPayload.numBombs}`
+          `[server] Create game request: difficulty=${createPayload.difficulty}, boardSize=${createPayload.boardSize}`
         );
-        this.handleCreateGame(createPayload.rows, createPayload.cols, createPayload.numBombs);
+        
+        this.handleCreateGame(createPayload.difficulty, createPayload.boardSize, createPayload.customRows, createPayload.customCols, createPayload.customNumBombs);
         return;
       }
       case "joinGame": {
@@ -203,8 +206,8 @@ export default class MessageReceiver {
     }
   }
 
-  private handleCreateGame(rows: number, cols: number, numBombs: number): void {
-    const result = this.gameSessionManager.createNewGame(rows, cols, numBombs);
+  private handleCreateGame(difficulty: Difficulty, boardSize: BoardSize, customRows: number, customCols: number, customNumBombs: number): void {
+    const result = this.gameSessionManager.createNewGame(difficulty, boardSize, customRows, customCols, customNumBombs);
     this.attachGame(result.game, result.error);
   }
 
@@ -216,7 +219,7 @@ export default class MessageReceiver {
   private attachGame(game: Game | null, error: string | null): void {
     this.currentGame = game;
 
-    if (!this.currentGame) {
+    if (!this.currentGame || this.currentGame.gameEnded) {
       const reason = error ?? "Could not attach client to game session.";
       logger.warn(`[server] Could not attach client to game session: ${reason}`);
       this.sendProtocolError("GAME_ATTACH_FAILED", reason);
@@ -247,10 +250,6 @@ export default class MessageReceiver {
       const shownTiles = this.currentGame.board.getShownTiles();
       if (shownTiles.length > 0) {
         this.currentGame.messageSender.sendRevealTiles(shownTiles, this.ws);
-      }
-
-      if (this.currentGame.gameEnded) {
-        this.currentGame.messageSender.sendGameOver(this.currentGame.gameWon ? GameState.WON : GameState.LOST);
       }
     }
   }

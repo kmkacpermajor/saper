@@ -11,23 +11,29 @@ import type { PartialMessage } from "@protobuf-ts/runtime";
 import { reflectionMergePartial } from "@protobuf-ts/runtime";
 import { MessageType } from "@protobuf-ts/runtime";
 /**
- * Creates a new game session.
- *
  * @generated from protobuf message saper.CreateGameRequest
  */
 export interface CreateGameRequest {
     /**
-     * @generated from protobuf field: uint32 rows = 1
+     * @generated from protobuf field: saper.Difficulty difficulty = 1
      */
-    rows: number;
+    difficulty: Difficulty;
     /**
-     * @generated from protobuf field: uint32 cols = 2
+     * @generated from protobuf field: saper.BoardSize board_size = 2
      */
-    cols: number;
+    boardSize: BoardSize;
     /**
-     * @generated from protobuf field: uint32 num_bombs = 3
+     * @generated from protobuf field: uint32 custom_rows = 3
      */
-    numBombs: number;
+    customRows: number;
+    /**
+     * @generated from protobuf field: uint32 custom_cols = 4
+     */
+    customCols: number;
+    /**
+     * @generated from protobuf field: uint32 custom_num_bombs = 5
+     */
+    customNumBombs: number;
 }
 /**
  * Joins an already existing game session by id.
@@ -185,6 +191,14 @@ export interface ConnectResponse {
      * @generated from protobuf field: uint32 player_id = 5
      */
     playerId: number;
+    /**
+     * @generated from protobuf field: saper.Difficulty difficulty = 6
+     */
+    difficulty: Difficulty;
+    /**
+     * @generated from protobuf field: saper.BoardSize board_size = 7
+     */
+    boardSize: BoardSize;
 }
 /**
  * @generated from protobuf message saper.RevealTilesResponse
@@ -409,20 +423,74 @@ export enum TileType {
      */
     EIGHT = 11
 }
+/**
+ * @generated from protobuf enum saper.Difficulty
+ */
+export enum Difficulty {
+    /**
+     * @generated from protobuf enum value: DIFFICULTY_EASY = 0;
+     */
+    EASY = 0,
+    /**
+     * @generated from protobuf enum value: DIFFICULTY_INTERMEDIATE = 1;
+     */
+    INTERMEDIATE = 1,
+    /**
+     * @generated from protobuf enum value: DIFFICULTY_HARD = 2;
+     */
+    HARD = 2,
+    /**
+     * @generated from protobuf enum value: DIFFICULTY_EXPERT = 3;
+     */
+    EXPERT = 3,
+    /**
+     * @generated from protobuf enum value: DIFFICULTY_CUSTOM = 4;
+     */
+    CUSTOM = 4
+}
+/**
+ * @generated from protobuf enum saper.BoardSize
+ */
+export enum BoardSize {
+    /**
+     * @generated from protobuf enum value: BOARD_SIZE_SMALL = 0;
+     */
+    SMALL = 0,
+    /**
+     * @generated from protobuf enum value: BOARD_SIZE_MEDIUM = 1;
+     */
+    MEDIUM = 1,
+    /**
+     * @generated from protobuf enum value: BOARD_SIZE_BIG = 2;
+     */
+    BIG = 2,
+    /**
+     * @generated from protobuf enum value: BOARD_SIZE_HUGE = 3;
+     */
+    HUGE = 3,
+    /**
+     * @generated from protobuf enum value: BOARD_SIZE_CUSTOM = 4;
+     */
+    CUSTOM = 4
+}
 // @generated message type with reflection information, may provide speed optimized methods
 class CreateGameRequest$Type extends MessageType<CreateGameRequest> {
     constructor() {
         super("saper.CreateGameRequest", [
-            { no: 1, name: "rows", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 2, name: "cols", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 3, name: "num_bombs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+            { no: 1, name: "difficulty", kind: "enum", T: () => ["saper.Difficulty", Difficulty, "DIFFICULTY_"] },
+            { no: 2, name: "board_size", kind: "enum", T: () => ["saper.BoardSize", BoardSize, "BOARD_SIZE_"] },
+            { no: 3, name: "custom_rows", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 4, name: "custom_cols", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 5, name: "custom_num_bombs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
     create(value?: PartialMessage<CreateGameRequest>): CreateGameRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
-        message.rows = 0;
-        message.cols = 0;
-        message.numBombs = 0;
+        message.difficulty = 0;
+        message.boardSize = 0;
+        message.customRows = 0;
+        message.customCols = 0;
+        message.customNumBombs = 0;
         if (value !== undefined)
             reflectionMergePartial<CreateGameRequest>(this, message, value);
         return message;
@@ -432,14 +500,20 @@ class CreateGameRequest$Type extends MessageType<CreateGameRequest> {
         while (reader.pos < end) {
             let [fieldNo, wireType] = reader.tag();
             switch (fieldNo) {
-                case /* uint32 rows */ 1:
-                    message.rows = reader.uint32();
+                case /* saper.Difficulty difficulty */ 1:
+                    message.difficulty = reader.int32();
                     break;
-                case /* uint32 cols */ 2:
-                    message.cols = reader.uint32();
+                case /* saper.BoardSize board_size */ 2:
+                    message.boardSize = reader.int32();
                     break;
-                case /* uint32 num_bombs */ 3:
-                    message.numBombs = reader.uint32();
+                case /* uint32 custom_rows */ 3:
+                    message.customRows = reader.uint32();
+                    break;
+                case /* uint32 custom_cols */ 4:
+                    message.customCols = reader.uint32();
+                    break;
+                case /* uint32 custom_num_bombs */ 5:
+                    message.customNumBombs = reader.uint32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -453,15 +527,21 @@ class CreateGameRequest$Type extends MessageType<CreateGameRequest> {
         return message;
     }
     internalBinaryWrite(message: CreateGameRequest, writer: IBinaryWriter, options: BinaryWriteOptions): IBinaryWriter {
-        /* uint32 rows = 1; */
-        if (message.rows !== 0)
-            writer.tag(1, WireType.Varint).uint32(message.rows);
-        /* uint32 cols = 2; */
-        if (message.cols !== 0)
-            writer.tag(2, WireType.Varint).uint32(message.cols);
-        /* uint32 num_bombs = 3; */
-        if (message.numBombs !== 0)
-            writer.tag(3, WireType.Varint).uint32(message.numBombs);
+        /* saper.Difficulty difficulty = 1; */
+        if (message.difficulty !== 0)
+            writer.tag(1, WireType.Varint).int32(message.difficulty);
+        /* saper.BoardSize board_size = 2; */
+        if (message.boardSize !== 0)
+            writer.tag(2, WireType.Varint).int32(message.boardSize);
+        /* uint32 custom_rows = 3; */
+        if (message.customRows !== 0)
+            writer.tag(3, WireType.Varint).uint32(message.customRows);
+        /* uint32 custom_cols = 4; */
+        if (message.customCols !== 0)
+            writer.tag(4, WireType.Varint).uint32(message.customCols);
+        /* uint32 custom_num_bombs = 5; */
+        if (message.customNumBombs !== 0)
+            writer.tag(5, WireType.Varint).uint32(message.customNumBombs);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -947,7 +1027,9 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
             { no: 2, name: "rows", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 3, name: "cols", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 4, name: "num_bombs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 5, name: "player_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+            { no: 5, name: "player_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 6, name: "difficulty", kind: "enum", T: () => ["saper.Difficulty", Difficulty, "DIFFICULTY_"] },
+            { no: 7, name: "board_size", kind: "enum", T: () => ["saper.BoardSize", BoardSize, "BOARD_SIZE_"] }
         ]);
     }
     create(value?: PartialMessage<ConnectResponse>): ConnectResponse {
@@ -957,6 +1039,8 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
         message.cols = 0;
         message.numBombs = 0;
         message.playerId = 0;
+        message.difficulty = 0;
+        message.boardSize = 0;
         if (value !== undefined)
             reflectionMergePartial<ConnectResponse>(this, message, value);
         return message;
@@ -980,6 +1064,12 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
                     break;
                 case /* uint32 player_id */ 5:
                     message.playerId = reader.uint32();
+                    break;
+                case /* saper.Difficulty difficulty */ 6:
+                    message.difficulty = reader.int32();
+                    break;
+                case /* saper.BoardSize board_size */ 7:
+                    message.boardSize = reader.int32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1008,6 +1098,12 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
         /* uint32 player_id = 5; */
         if (message.playerId !== 0)
             writer.tag(5, WireType.Varint).uint32(message.playerId);
+        /* saper.Difficulty difficulty = 6; */
+        if (message.difficulty !== 0)
+            writer.tag(6, WireType.Varint).int32(message.difficulty);
+        /* saper.BoardSize board_size = 7; */
+        if (message.boardSize !== 0)
+            writer.tag(7, WireType.Varint).int32(message.boardSize);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
