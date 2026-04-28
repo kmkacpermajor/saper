@@ -44,10 +44,6 @@ resource "google_cloud_run_v2_service" "backend" {
         value = "0.0.0.0"
       }
 
-      env {
-        name  = "PORT"
-        value = tostring(local.backend_port)
-      }
     }
   }
 
