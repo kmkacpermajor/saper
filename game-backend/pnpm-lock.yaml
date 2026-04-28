@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@saper/contracts':
-        specifier: file:..\shared\contracts
-        version: file:../shared/contracts
+        specifier: link:..\shared\contracts
+        version: link:../shared/contracts
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -194,12 +194,6 @@ packages:
 
   '@pinojs/redact@0.4.0':
     resolution: {integrity: sha512-k2ENnmBugE/rzQfEcdWHcCY+/FM3VLzH9cYEsbdsoqrvzAKRhUZeRNhAZvB8OitQJ1TBed3yqWtdjzS6wJKBwg==}
-
-  '@protobuf-ts/runtime@2.11.1':
-    resolution: {integrity: sha512-KuDaT1IfHkugM2pyz+FwiY80ejWrkH1pAtOBOZFuR6SXEFTsnb/jiQWQ1rCIrcKx2BtyxnxW6BWwsVSA/Ie+WQ==}
-
-  '@saper/contracts@file:../shared/contracts':
-    resolution: {directory: ../shared/contracts, type: directory}
 
   '@types/node@25.5.0':
     resolution: {integrity: sha512-jp2P3tQMSxWugkCUKLRPVUpGaL5MVFwF8RDuSRztfwgN1wmqJeMSbKlnEtQqU8UrhTmzEmZdu2I6v2dpp7XIxw==}
@@ -417,12 +411,6 @@ snapshots:
     optional: true
 
   '@pinojs/redact@0.4.0': {}
-
-  '@protobuf-ts/runtime@2.11.1': {}
-
-  '@saper/contracts@file:../shared/contracts':
-    dependencies:
-      '@protobuf-ts/runtime': 2.11.1
 
   '@types/node@25.5.0':
     dependencies:

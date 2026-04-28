@@ -1,0 +1,129 @@
+name: Deploy to Cloud Run
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
+  REGION: ${{ vars.GCP_REGION }}
+  ARTIFACT_REPO: saper
+  BACKEND_IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/saper/game-backend
+  FRONTEND_IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/saper/frontend
+  TF_STATE_BUCKET: saper-tfstate-${{ secrets.GCP_PROJECT_ID }}
+  TF_STATE_PREFIX: prod
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      backend_image: ${{ steps.image_refs.outputs.backend_image }}
+      frontend_image: ${{ steps.image_refs.outputs.frontend_image }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker auth
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image
+        id: build_backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: game-backend/Dockerfile
+          push: true
+          tags: ${{ env.BACKEND_IMAGE_BASE }}:${{ github.sha }}
+
+      - name: Build and push frontend image
+        id: build_frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frontend/Dockerfile
+          push: true
+          tags: ${{ env.FRONTEND_IMAGE_BASE }}:${{ github.sha }}
+
+      - name: Capture image digests
+        id: image_refs
+        run: |
+          echo "backend_image=${{ env.BACKEND_IMAGE_BASE }}@${{ steps.build_backend.outputs.digest }}" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=${{ env.FRONTEND_IMAGE_BASE }}@${{ steps.build_frontend.outputs.digest }}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.8.5"
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" -backend-config="prefix=${{ env.TF_STATE_PREFIX }}"
+
+      - name: Terraform plan
+        working-directory: terraform
+        env:
+          TF_VAR_project_id: ${{ env.PROJECT_ID }}
+          TF_VAR_project_number: ${{ env.PROJECT_NUMBER }}
+          TF_VAR_region: ${{ env.REGION }}
+          TF_VAR_backend_image: ${{ steps.image_refs.outputs.backend_image }}
+          TF_VAR_frontend_image: ${{ steps.image_refs.outputs.frontend_image }}
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: terraform/tfplan
+
+  apply:
+    runs-on: ubuntu-latest
+    needs: plan
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.8.5"
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: terraform
+
+      - name: Terraform init
+        working-directory: terraform
+        run: terraform init -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" -backend-config="prefix=${{ env.TF_STATE_PREFIX }}"
+
+      - name: Terraform apply
+        working-directory: terraform
+        run: terraform apply -input=false tfplan

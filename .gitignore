@@ -4,3 +4,4 @@ client/dist/
 server/dist/
 shared/contracts/dist/
 *.log
+gha-creds-*.json
