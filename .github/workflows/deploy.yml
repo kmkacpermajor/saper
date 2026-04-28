@@ -89,11 +89,6 @@ jobs:
         with:
           terraform_version: "1.8.5"
 
-      - name: Debug Image Variables
-        run: |
-          echo "Backend Image string is: '${{ needs.build.outputs.backend_image }}'"
-          echo "Frontend Image string is: '${{ needs.build.outputs.frontend_image }}'"
-
       - name: Terraform init
         working-directory: terraform
         run: terraform init -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" -backend-config="prefix=${{ env.TF_STATE_PREFIX }}"
