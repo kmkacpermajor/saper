@@ -9,13 +9,13 @@ permissions:
   id-token: write
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER }}
   REGION: ${{ vars.GCP_REGION }}
   ARTIFACT_REPO: saper
-  BACKEND_IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/saper/game-backend
-  FRONTEND_IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/saper/frontend
-  TF_STATE_BUCKET: saper-tfstate-${{ secrets.GCP_PROJECT_ID }}
+  BACKEND_IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/saper/game-backend
+  FRONTEND_IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/saper/frontend
+  TF_STATE_BUCKET: saper-tfstate-${{ vars.GCP_PROJECT_ID }}
   TF_STATE_PREFIX: prod
 
 jobs:
