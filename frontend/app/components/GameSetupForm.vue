@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import { BoardSize, Difficulty } from '@saper/contracts';
+  
+const { boardSize, difficulty, customBoardWidth, customBoardHeight, customNumBombs } = useGameSetupState();
 
-const boardSize = ref(BoardSize.MEDIUM);
-const difficulty = ref(Difficulty.INTERMEDIATE);
-
-const customBoardWidth = ref(15);
-const customBoardHeight = ref(15);
-const customNumBombs = ref(15);
 const maxBombs = computed(() => Math.floor(customBoardWidth.value * customBoardHeight.value * 0.35));
 
 const { connectionType, gameId, connecting, connectFromSetup } = useRouteGameConnection();
