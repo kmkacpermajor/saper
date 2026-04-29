@@ -83,6 +83,10 @@ export default class MouseInputHandler {
       this.panActive = true;
     }
 
+    if (this.panActive) {
+      this.controller.panViewportByScreenDelta(dx, dy);
+    }
+
     this.dragLastPoint = { x: event.clientX, y: event.clientY };
   };
 

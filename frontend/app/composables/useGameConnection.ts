@@ -2,7 +2,7 @@ import type { CreateGameRequest } from "@saper/contracts";
 
 type SetupConnectionType = "create" | "join";
 
-export const useRouteGameConnection = () => {
+export const useGameConnection = () => {
   const route = useRoute();
   const router = useRouter();
   const loadingIndicator = useLoadingIndicator();

@@ -35,6 +35,7 @@ export default defineNuxtConfig({
       include: [
         'pixi.js',
         '@saper/contracts',
+        'vue-qr'
       ]
     }
   },
@@ -44,9 +45,5 @@ export default defineNuxtConfig({
     "@nuxt/hints",
     "@nuxt/scripts",
     "@pinia/nuxt"
-  ],
-
-  build: {
-    transpile: ['pixi-viewport', 'pixi.js']
-  }
+  ]
 });

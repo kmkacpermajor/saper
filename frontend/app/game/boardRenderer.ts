@@ -1,4 +1,4 @@
-import { Application, Container, Rectangle, Texture, deprecation } from "pixi.js";
+import { Application, Container, Rectangle, Texture } from "pixi.js";
 import { TileUpdate, TileType, type TileCoordinates } from "@saper/contracts";
 import BoardThemeManager from "./boardThemeManager";
 import PlayerCursorOverlay from "./playerCursorOverlay";
@@ -33,11 +33,9 @@ export default class BoardRenderer {
       autoDensity: true,
       backgroundAlpha: 0,
     });
-    deprecation.quiet = true;
 
     await this.themeManager.init();
     this.container.addChild(this.playerCursorOverlay.container);
-    this.container.eventMode = "static";
     app.stage.addChild(this.container);
   }
 

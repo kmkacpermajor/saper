@@ -14,9 +14,5 @@
     {
       "path": "./.nuxt/tsconfig.node.json"
     }
-  ],
-  "compilerOptions": {
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-  }
+  ]
 }

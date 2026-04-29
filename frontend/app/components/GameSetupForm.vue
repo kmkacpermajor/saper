@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { BoardSize, Difficulty } from '@saper/contracts';
-import QrCodeModal from './QrCodeModal.vue';
   
 const { boardSize, difficulty, customBoardWidth, customBoardHeight, customNumBombs } = useGameSetupState();
 
 const maxBombs = computed(() => Math.floor(customBoardWidth.value * customBoardHeight.value * 0.35));
 
-const { connectionType, gameId, connecting, connectFromSetup } = useRouteGameConnection();
+const { connectionType, gameId, connecting, connectFromSetup } = useGameConnection();
 const { gameError } = useGameError();
 
 const onConnect = async (): Promise<void> => {

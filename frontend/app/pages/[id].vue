@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import QrCodeModal from '../components/QrCodeModal.vue';
 
 const gameCanvasContainer = ref<HTMLDivElement | null>(null);
-const { routeGameId, gameRunning, connectFromRoute, disconnectRouteGame } = useRouteGameConnection();
+const { routeGameId, gameRunning, connectFromRoute, disconnectRouteGame } = useGameConnection();
 const isQrCodeOpen = ref(false);
 
 onMounted(async () => {

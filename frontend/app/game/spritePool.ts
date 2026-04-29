@@ -102,9 +102,6 @@ export default class SpritePool {
   }
 
   destroy(): void {
-    for (const sprite of this.sprites) {
-      sprite.destroy({ children: true, texture: false });
-    }
     this.sprites = [];
     this.poolAssignments = [];
     this.tileToPoolIndex.clear();

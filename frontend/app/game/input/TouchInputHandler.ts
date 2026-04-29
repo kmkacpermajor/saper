@@ -121,6 +121,8 @@ export default class TouchInputHandler {
       }
 
       const distance = this.resolveTouchesDistance(firstTouch, secondTouch);
+      const midX = (firstTouch.clientX + secondTouch.clientX) / 2;
+      const midY = (firstTouch.clientY + secondTouch.clientY) / 2;
 
       if (!this.pinchActive) {
         this.cancelTouchGesture(true);
@@ -128,6 +130,11 @@ export default class TouchInputHandler {
         this.pinchLastDistance = distance;
         event.preventDefault();
         return;
+      }
+
+      if (this.pinchLastDistance > 0) {
+        const factor = distance / this.pinchLastDistance;
+        this.controller.zoomViewportAtClientPoint(midX, midY, factor);
       }
 
       this.pinchLastDistance = distance;
@@ -163,6 +170,13 @@ export default class TouchInputHandler {
         this.clearTouchLongPressTimer();
       }
       this.panActive = true;
+    }
+
+    if (this.panActive) {
+      const lastPoint = this.panLastPoint ?? startPoint;
+      const dx = touch.clientX - lastPoint.x;
+      const dy = touch.clientY - lastPoint.y;
+      this.controller.panViewportByScreenDelta(dx, dy);
     }
 
     this.panLastPoint = { x: touch.clientX, y: touch.clientY };
