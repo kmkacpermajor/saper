@@ -32,4 +32,8 @@ export default class Tile {
 
     return (TileType.EMPTY + this.adjacentMines) as TileType;
   }
+
+  toString(): string {
+    return `Tile{isMine: ${this.isMine}, isRevealed: ${this.isRevealed}, isFlagged: ${this.isFlagged}, adjacentMines: ${this.adjacentMines}, type: ${this.getType()}}`;
+  }
 }

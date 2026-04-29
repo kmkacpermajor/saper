@@ -18,7 +18,7 @@ const parseLogLevel = (value: string | undefined): LogLevel => {
 const level = parseLogLevel(process.env.LOG_LEVEL);
 const isProduction = process.env.NODE_ENV === "production";
 
-export const logger = pino({
+export const log = pino({
   level,
   transport: isProduction
     ? undefined

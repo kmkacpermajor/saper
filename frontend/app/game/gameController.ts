@@ -24,6 +24,7 @@ export default class GameController {
   private _gameState: GameState = GameState.IN_PROGRESS;
   private _numBombs: number = 0;
   private _playerId: number = 0;
+  private _gameTimeMs: number = 0;
 
   private initialized: boolean = false;
   private rows: number = 0;
@@ -65,6 +66,15 @@ export default class GameController {
   set playerId(value: number) {
     this._playerId = value;
     this.emitEvent(GAME_EVENT_TYPE.PLAYER_ID_UPDATE, value);
+  }
+
+  get gameTimeMs(): number {
+    return this._gameTimeMs;
+  }
+
+  set gameTimeMs(value: number) {
+    this._gameTimeMs = value;
+    this.emitEvent(GAME_EVENT_TYPE.GAME_TIME_MS_UPDATE, value);
   }
 
   emitEvent<T extends GameEvent["type"]>(
@@ -154,7 +164,7 @@ export default class GameController {
       }
 
       case "gameOver": {
-        this.applyGameOver(message.payload.gameOver.state as GameState);
+        this.applyGameOver(message.payload.gameOver.state as GameState, message.payload.gameOver.gameTimeMs);
         return;
       }
 
@@ -227,8 +237,9 @@ export default class GameController {
     }
   }
 
-  applyGameOver(state: GameState): void {
+  applyGameOver(state: GameState, gameTimeMs: number): void {
     this.gameState = state;
+    this.gameTimeMs = gameTimeMs;
   }
 
   applyReset(): void {
@@ -255,7 +266,7 @@ export default class GameController {
 
   revealTile(tile: TileCoordinates): void {
     // prerender as empty, fill when response comes
-    this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: TileType.EMPTY }]);
+    // this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: TileType.EMPTY }]);
 
     this.wsClient.sendCursorClick(tile);
     this.wsClient.sendRevealTiles([tile]);
@@ -267,7 +278,7 @@ export default class GameController {
       return;
     }
     // prerender as toggled, fill when response comes
-    this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: tileType === TileType.FLAGGED ? TileType.HIDDEN : TileType.FLAGGED }]);
+    // this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: tileType === TileType.FLAGGED ? TileType.HIDDEN : TileType.FLAGGED }]);
 
     this.wsClient.sendCursorClick(tile);
     this.wsClient.sendFlagTile(tile, tileType === TileType.FLAGGED);

@@ -1,6 +1,6 @@
 import type { TileCoordinates, TileUpdate } from "@saper/contracts";
 import Tile from "./Tile.js";
-import { create } from "node:domain";
+import { log } from "./logger.js";
 
 export default class Board {
   rows: number;
@@ -62,11 +62,11 @@ export default class Board {
       const pool: TileCoordinates[] = [];
 
       // 1. Generate pool, excluding the 3x3 safe zone around the starting click
-      for (let x = 0; x < this.cols; x++) {
-          for (let y = 0; y < this.rows; y++) {
+      for (let y = 0; y < this.rows; y++) {
+          for (let x = 0; x < this.cols; x++) {
               const isSafeZone = Math.abs(y - tile.y) <= 1 && Math.abs(x - tile.x) <= 1;
               if (!isSafeZone) {
-                  pool.push({ x, y });
+                  pool.push({ y, x });
               }
           }
       }
@@ -85,7 +85,8 @@ export default class Board {
           [pool[i], pool[randomIndex]] = [pool[randomIndex], pool[i]];
           
           // The item at index 'i' is now a guaranteed random, unique mine location
-          const { x, y } = pool[i];
+          const { y, x } = pool[i];
+          this.bombCoords.push({ y, x });
           this.board[y][x].isMine = true;
       }
   }
@@ -100,9 +101,9 @@ export default class Board {
           [1, -1],  [1, 0],  [1, 1]
       ];
 
-      for (let x = 0; x < this.rows; x++) {
-          for (let y = 0; y < this.cols; y++) {
-              if (this.board[x][y].isMine) continue;
+      for (let y = 0; y < this.rows; y++) {
+          for (let x = 0; x < this.cols; x++) {
+              if (this.board[y][x].isMine) continue;
 
               let count = 0;
               for (const [dx, dy] of directions) {
@@ -110,13 +111,13 @@ export default class Board {
                   const ny = y + dy;
 
                   // Check bounds and count mines
-                  if (nx >= 0 && nx < this.rows && ny >= 0 && ny < this.cols) {
-                      if (this.board[nx][ny].isMine) {
+                  if (ny >= 0 && ny < this.rows && nx >= 0 && nx < this.cols) {
+                      if (this.board[ny][nx].isMine) {
                           count++;
                       }
                   }
               }
-              this.board[x][y].adjacentMines = count;
+              this.board[y][x].adjacentMines = count;
           }
       }
   }

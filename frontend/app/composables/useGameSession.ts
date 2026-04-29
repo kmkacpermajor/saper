@@ -9,6 +9,7 @@ export const useGameSession = () => {
   const currentGameState = useState<GameState>("game:state", () => GameState.DISCONNECTED);
   const currentNumBombs = useState<number>("game:num-bombs", () => 0);
   const currentPlayerId = useState<number>("game:player-id", () => 0);
+  const currentGameTimeMs = useState<number>("game:game-time-ms", () => 0);
   const gameController = useState<GameController | null>("game:controller", () => null);
 
   const gameRunning = computed(() => currentGameState.value >= GameState.IN_PROGRESS);
@@ -25,6 +26,7 @@ export const useGameSession = () => {
     currentGameState.value = GameState.DISCONNECTED;
     currentNumBombs.value = 0;
     currentPlayerId.value = 0;
+    currentGameTimeMs.value = 0;
   };
 
   const applyGameUpdateEvent = (event: GameEvent): void => {
@@ -40,6 +42,10 @@ export const useGameSession = () => {
 
     if (event.type === GAME_EVENT_TYPE.PLAYER_ID_UPDATE) {
       currentPlayerId.value = event.payload;
+    }
+
+    if (event.type === GAME_EVENT_TYPE.GAME_TIME_MS_UPDATE) {
+      currentGameTimeMs.value = event.payload;
     }
   };
 
@@ -114,6 +120,7 @@ export const useGameSession = () => {
     currentGameState,
     currentNumBombs,
     currentPlayerId,
+    currentGameTimeMs,
     gameStatusMessage
   };
 };

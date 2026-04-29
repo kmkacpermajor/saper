@@ -2,7 +2,7 @@ import { BoardSize, CONTRACT_VERSION, Difficulty, GameState, decodeClientMessage
 import type { RawData, WebSocket } from "ws";
 import type Game from "./Game.js";
 import type GameSessionManager from "./GameSessionManager.js";
-import { logger } from "./logger.js";
+import { log } from "./logger.js";
 import { create } from "node:domain";
 
 const toUint8Array = (message: RawData): Uint8Array => {
@@ -43,7 +43,7 @@ export default class MessageReceiver {
       if (removedPlayerId !== null) {
         this.currentGame.messageSender.sendPlayerCursorRemove(removedPlayerId);
       }
-      logger.debug(
+      log.debug(
         `[server] Detached player ${removedPlayerId ?? "unknown"} from game ${this.currentGame.gameId}.`
       );
       this.currentGame = null;
@@ -71,13 +71,13 @@ export default class MessageReceiver {
     try {
       decodedMessage = decodeClientMessage(toUint8Array(message));
     } catch (error) {
-      logger.warn({ err: error }, "[server] Failed to decode client message. Closing socket.");
+      log.warn({ err: error }, "[server] Failed to decode client message. Closing socket.");
       this.ws.close();
       return;
     }
 
     if (decodedMessage.contractVersion !== CONTRACT_VERSION) {
-      logger.warn(
+      log.warn(
         `[server] Contract version mismatch: expected ${CONTRACT_VERSION}, got ${decodedMessage.contractVersion}. Closing socket.`
       );
       this.ws.close();
@@ -90,7 +90,7 @@ export default class MessageReceiver {
       decodedMessage.payload.oneofKind !== "joinGame"
     ) {
       const payloadKind = decodedMessage.payload.oneofKind ?? "unknown";
-      logger.warn(
+      log.warn(
         `[server] Non-handshake message (${payloadKind}) received before session attach. Closing socket.`
       );
       this.sendProtocolError(
@@ -117,7 +117,7 @@ export default class MessageReceiver {
       case "createGame": {
         const createPayload = decodedMessage.payload.createGame;
 
-        logger.debug(
+        log.debug(
           `[server] Create game request: difficulty=${createPayload.difficulty}, boardSize=${createPayload.boardSize}`
         );
         
@@ -126,7 +126,7 @@ export default class MessageReceiver {
       }
       case "joinGame": {
         const joinPayload = decodedMessage.payload.joinGame;
-        logger.debug(`[server] Join game request: gameId=${joinPayload.requestedGameId}`);
+        log.debug(`[server] Join game request: gameId=${joinPayload.requestedGameId}`);
         this.handleJoinGame(joinPayload.requestedGameId);
         return;
       }
@@ -137,14 +137,14 @@ export default class MessageReceiver {
         }
         const revealPayload = decodedMessage.payload.revealTile;
         if (revealPayload.tiles.length === 0) {
-          logger.warn("[server] Empty reveal tile request received.");
+          log.warn("[server] Empty reveal tile request received.");
           this.sendProtocolError(
             "EMPTY_REVEAL_REQUEST",
             "RevealTileRequest.tiles must contain at least one tile."
           );
           return;
         }
-        logger.debug(`[server] Reveal tile request: ${revealPayload.tiles.length} tiles.`);
+        log.debug(`[server] Reveal tile request: ${revealPayload.tiles.length} tiles.`);
         this.currentGame.revealTiles(revealPayload.tiles);
         return;
       }
@@ -199,7 +199,7 @@ export default class MessageReceiver {
         return;
       }
       default: {
-        logger.warn("[server] Unknown client payload kind. Closing socket.");
+        log.warn("[server] Unknown client payload kind. Closing socket.");
         this.ws.close();
         return;
       }
@@ -221,16 +221,16 @@ export default class MessageReceiver {
 
     if (!this.currentGame || this.currentGame.gameEnded) {
       const reason = error ?? "Could not attach client to game session.";
-      logger.warn(`[server] Could not attach client to game session: ${reason}`);
+      log.warn(`[server] Could not attach client to game session: ${reason}`);
       this.sendProtocolError("GAME_ATTACH_FAILED", reason);
       this.ws.close();
       return;
     }
 
-    logger.debug(`[server] Client attached to game ${this.currentGame.gameId}.`);
+    log.debug(`[server] Client attached to game ${this.currentGame.gameId}.`);
 
     this.currentPlayerId = this.currentGame.registerPlayer(this.ws);
-    logger.debug(
+    log.debug(
       `[server] Assigned player ${this.currentPlayerId} to game ${this.currentGame.gameId}.`
     );
 

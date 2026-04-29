@@ -3,6 +3,7 @@ import type { WebSocket } from "ws";
 import Board from "./Board.js";
 import MessageSender from "./MessageSender.js";
 import PlayerIdentityRegistry from "./PlayerIdentityRegistry.js";
+import { log } from "./logger.js";
 
 const MAX_ZERO_START_RETRIES = 8;
 
@@ -85,6 +86,7 @@ export default class Game {
         this.board.gameWon = state === GameState.WON;
         const gameTimeMs = Date.now() - this.gameStartTime!;
         this.messageSender.sendGameOver(state, gameTimeMs);
+        log.warn(`Game ${this.gameId} ended. State: ${state}, Time: ${gameTimeMs}ms, Bombs: ${this.board.numBombs}, Flagged Bombs: ${this.board.numOfFlaggedBombs()}`);
     }
   }
 
@@ -107,8 +109,7 @@ export default class Game {
       this.board = new Board(this.rows, this.cols, this.numBombs, tiles[0]);
     }
     
-
-    if (!this.board || this.board.gameEnded) {
+    if (!this.board) {
       return;
     }
 
@@ -145,7 +146,7 @@ export default class Game {
   }
 
   flagTile(y: number, x: number): void {
-    if (!this.board || this.board.gameEnded || this.board.board[y][x].isRevealed) {
+    if (!this.board || this.board.board[y][x].isRevealed) {
       return;
     }
 
@@ -163,7 +164,7 @@ export default class Game {
   }
 
   unflagTile(y: number, x: number): void {
-    if (!this.board || this.board.gameEnded || this.board.board[y][x].isRevealed) {
+    if (!this.board || this.board.board[y][x].isRevealed) {
       return;
     }
 

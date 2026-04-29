@@ -12,7 +12,7 @@ const gameSession = useGameSession();
 <template>
   <div
     class="rounded-xl border border-slate-300 bg-slate-50/80 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-800/70">
-    <div class="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
+    <div class="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-center">
       <div class="flex flex-wrap items-center gap-2">
         <span
           class="rounded-md bg-white px-3 py-1 font-mono text-sm text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
@@ -22,6 +22,12 @@ const gameSession = useGameSession();
           ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300'
           : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300'">
           {{ gameSession.gameStatusMessage }}
+        </span>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="rounded-md bg-white px-3 py-1 font-mono text-sm text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200" v-if="gameSession.currentGameTimeMs.value !== 0">
+          Time: {{ formatTime(gameSession.currentGameTimeMs.value) }}
         </span>
       </div>
 
