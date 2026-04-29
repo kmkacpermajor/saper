@@ -1,5 +1,16 @@
-import { Container, Graphics } from "pixi.js";
+import { Color, Container, Graphics } from "pixi.js";
 import type { TileCoordinates } from "@saper/contracts";
+
+const resolvePlayerCursorTint = (playerId: number): Color => {
+  const GOLDEN_ANGLE_DEGREES = 137.508;
+  const BASE_HUE_DEGREES = 26;
+  const PLAYER_CURSOR_SATURATION = 0.9;
+  const PLAYER_CURSOR_LIGHTNESS = 0.68;
+
+  const playerIndex = Math.max(0, Math.trunc(playerId) - 1);
+  const hue = (BASE_HUE_DEGREES + playerIndex * GOLDEN_ANGLE_DEGREES) % 360;
+  return new Color({h: hue, s: PLAYER_CURSOR_SATURATION, l: PLAYER_CURSOR_LIGHTNESS});
+};
 
 export default class PlayerCursorOverlay {
   readonly container = new Container();
@@ -37,7 +48,7 @@ export default class PlayerCursorOverlay {
       .lineTo(right, bottom - cornerSize);
   }
 
-  updatePlayerCursor(playerId: number, tile: TileCoordinates, tint: number): void {
+  updatePlayerCursor(playerId: number, tile: TileCoordinates): void {
     let cursor = this.cursors.get(playerId);
 
     if (!cursor) {
@@ -71,7 +82,7 @@ export default class PlayerCursorOverlay {
     this.drawCornerPath(cursor, left, top, right, bottom, cornerSize);
     cursor.stroke({
       width: strokeWidth,
-      color: tint,
+      color: resolvePlayerCursorTint(playerId),
       alpha: 0.95,
       cap: "round",
       join: "round"

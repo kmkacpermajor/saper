@@ -1,4 +1,5 @@
 import { Application, Rectangle } from "pixi.js";
+import { Viewport } from "pixi-viewport";
 import { TileUpdate ,GameState, TileType, type ServerMessage, type TileCoordinates, BoardSize, Difficulty } from "@saper/contracts";
 import log from "~/utils/logger";
 import BoardRenderer from "./boardRenderer";
@@ -6,18 +7,20 @@ import { GAME_EVENT_TYPE, type GameEvent } from "./gameEvents";
 import type { WsClient } from "~/composables/useWsClient";
 import MouseInputHandler from "./input/MouseInputHandler";
 import TouchInputHandler from "./input/TouchInputHandler";
-import ViewportController from "./viewportController";
 
 type GameEventHandler = (event: GameEvent) => void;
 
 export default class GameController {
   private readonly tileSize = 32;
-  private readonly minInitialZoom = 0.55;
+  private readonly minZoom = 0.12;
+  private readonly maxZoom = 4;
+  private readonly fitPaddingRatio = 0.96;
+  private readonly fitMinZoom = 1.0;
 
   private readonly boardRenderer: BoardRenderer = new BoardRenderer(this.tileSize);
   private readonly mouseInputHandler: MouseInputHandler = new MouseInputHandler(this);
   private readonly touchInputHandler: TouchInputHandler = new TouchInputHandler(this);
-  private readonly viewportController: ViewportController = new ViewportController();
+  private viewport: Viewport | null = null;
 
   private boardState: TileType[][] = [];
   private chordPreviewTiles: TileCoordinates[] = [];
@@ -92,7 +95,28 @@ export default class GameController {
     }
 
     await this.boardRenderer.init(this.app);
-    this.boardRenderer.container.eventMode = "static";
+    this.viewport = new Viewport({
+      screenWidth: this.app.renderer.width,
+      screenHeight: this.app.renderer.height,
+      worldWidth: 1,
+      worldHeight: 1,
+      events: this.app.renderer.events,
+      passiveWheel: false,
+      stopPropagation: true,
+      forceHitArea: new Rectangle(0, 0, this.app.renderer.width, this.app.renderer.height)
+    });
+    this.viewport.eventMode = "static";
+    this.viewport
+      .drag()
+      .pinch()
+      .wheel({ wheelZoom: true })
+      .decelerate()
+      .clampZoom({ minScale: this.minZoom, maxScale: this.maxZoom });
+    this.viewport.on("moved", this.handleViewportChanged);
+    this.viewport.on("zoomed", this.handleViewportChanged);
+
+    this.app.stage.addChild(this.viewport);
+    this.viewport.addChild(this.boardRenderer.container);
     this.app.stage.eventMode = "static";
     this.app.stage.hitArea = new Rectangle(0, 0, 1, 1);
 
@@ -109,7 +133,6 @@ export default class GameController {
     this.app.canvas.addEventListener("touchmove", this.touchInputHandler.handleCanvasTouchMove, { passive: false });
     this.app.canvas.addEventListener("touchend", this.touchInputHandler.handleCanvasTouchEnd, { passive: false });
     this.app.canvas.addEventListener("touchcancel", this.touchInputHandler.handleCanvasTouchCancel, { passive: false });
-    this.app.canvas.addEventListener("wheel", this.handleCanvasWheel, { passive: false });
     window.addEventListener("mouseup", this.mouseInputHandler.handleWindowMouseUp);
     window.addEventListener("mousemove", this.mouseInputHandler.handleWindowMouseMove);
     window.addEventListener("resize", this.handleWindowResize);
@@ -197,7 +220,6 @@ export default class GameController {
 
     this.boardRenderer.setupBoard(rows, cols);
     this.boardRenderer.clearPlayerCursors();
-    this.viewportController.setWorldSize(this.cols * this.tileSize, this.rows * this.tileSize);
     this.updateViewportFromContainer(true);
   }
 
@@ -249,7 +271,6 @@ export default class GameController {
     this.boardState = this.initializeBoard(this.rows, this.cols);
     this.boardRenderer.setupBoard(this.rows, this.cols);
     this.boardRenderer.clearPlayerCursors();
-    this.viewportController.setWorldSize(this.cols * this.tileSize, this.rows * this.tileSize);
     this.updateViewportFromContainer(true);
 
     this.gameState = GameState.IN_PROGRESS;
@@ -266,7 +287,7 @@ export default class GameController {
 
   revealTile(tile: TileCoordinates): void {
     // prerender as empty, fill when response comes
-    // this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: TileType.EMPTY }]);
+    this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: TileType.EMPTY }], true);
 
     this.wsClient.sendCursorClick(tile);
     this.wsClient.sendRevealTiles([tile]);
@@ -278,7 +299,7 @@ export default class GameController {
       return;
     }
     // prerender as toggled, fill when response comes
-    // this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: tileType === TileType.FLAGGED ? TileType.HIDDEN : TileType.FLAGGED }]);
+    this.boardRenderer.renderTiles([{ y: tile.y, x: tile.x, type: tileType === TileType.FLAGGED ? TileType.HIDDEN : TileType.FLAGGED }], true);
 
     this.wsClient.sendCursorClick(tile);
     this.wsClient.sendFlagTile(tile, tileType === TileType.FLAGGED);
@@ -448,23 +469,11 @@ export default class GameController {
       return null;
     }
 
-    const { zoom } = this.viewportController.getState();
-    const { x: horizontalOffset, y: verticalOffset } = this.resolveBoardOffsets(zoom);
-    const localX = canvasX - horizontalOffset;
-    const localY = canvasY - verticalOffset;
-
-    const worldPixelWidth = this.cols * this.tileSize;
-    const worldPixelHeight = this.rows * this.tileSize;
-    if (
-      localX < 0 ||
-      localY < 0 ||
-      localX > worldPixelWidth * zoom ||
-      localY > worldPixelHeight * zoom
-    ) {
+    if (!this.viewport) {
       return null;
     }
 
-    const worldPoint = this.viewportController.screenToWorld(localX, localY);
+    const worldPoint = this.viewport.toWorld(canvasX, canvasY);
     const x = Math.floor(worldPoint.x / this.tileSize);
     const y = Math.floor(worldPoint.y / this.tileSize);
 
@@ -476,9 +485,15 @@ export default class GameController {
   }
 
   panViewportByScreenDelta(deltaX: number, deltaY: number): void {
-    const { zoom } = this.viewportController.getState();
-    this.viewportController.panByWorldDelta(-deltaX / zoom, -deltaY / zoom);
-    this.applyViewportTransform();
+    const viewport = this.viewport;
+    if (!viewport) {
+      return;
+    }
+
+    const worldDx = -deltaX / viewport.scaled;
+    const worldDy = -deltaY / viewport.scaled;
+    viewport.moveCenter(viewport.center.x + worldDx, viewport.center.y + worldDy);
+    this.updateVisibleWorldFromViewport();
   }
 
   zoomViewportAtClientPoint(clientX: number, clientY: number, scaleFactor: number): void {
@@ -505,23 +520,37 @@ export default class GameController {
     if (canvasX < 0 || canvasY < 0 || canvasX > this.app.renderer.width || canvasY > this.app.renderer.height) {
       return;
     }
+    if (!this.viewport) {
+      return;
+    }
 
-    this.viewportController.zoomAtScreenPoint(
-      scaleFactor,
-      canvasX,
-      canvasY
-    );
-    this.applyViewportTransform();
+    const currentScale = this.viewport.scaled;
+    const targetScale = this.clampScale(currentScale * scaleFactor);
+    if (targetScale === currentScale) {
+      return;
+    }
+
+    const worldBefore = this.viewport.toWorld(canvasX, canvasY);
+    this.viewport.setZoom(targetScale, false);
+    const worldAfter = this.viewport.toWorld(canvasX, canvasY);
+    const dx = worldAfter.x - worldBefore.x;
+    const dy = worldAfter.y - worldBefore.y;
+    this.viewport.moveCenter(this.viewport.center.x - dx, this.viewport.center.y - dy);
+    this.updateVisibleWorldFromViewport();
   }
 
   fitViewport(): void {
-    this.viewportController.fitToViewport();
-    this.applyViewportTransform();
+    this.fitViewportToWorld();
   }
 
   centerViewport(): void {
-    this.viewportController.centerAtCurrentZoom();
-    this.applyViewportTransform();
+    if (!this.viewport) {
+      return;
+    }
+
+    const { width, height } = this.getWorldSize();
+    this.viewport.moveCenter(width / 2, height / 2);
+    this.updateVisibleWorldFromViewport();
   }
 
   zoomViewportAtCanvasCenter(scaleFactor: number): void {
@@ -529,23 +558,19 @@ export default class GameController {
     this.zoomViewportAtClientPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, scaleFactor);
   }
 
-  private handleCanvasWheel = (event: WheelEvent): void => {
-    event.preventDefault();
-
-    const factor = event.deltaY > 0 ? 0.9 : 1.1;
-    this.zoomViewportAtClientPoint(event.clientX, event.clientY, factor);
-  };
-
   private handleCanvasContextMenu = (event: MouseEvent): void => {
     event.preventDefault();
   };
 
   private handleWindowResize = (): void => {
-    this.viewportController.centerAtCurrentZoom(); //TODO: we shouldn't have to do this, but i don't understand why tile resolving gets messed up after resize without it
     this.updateViewportFromContainer(true);
   };
 
   updateViewportFromContainer(fitToViewport: boolean): void {
+    if (!this.viewport) {
+      return;
+    }
+
     // const parent = this.app.canvas.parentElement;
     const parent = document.getElementById('gameCanvasContainer');
     const width = parent?.clientWidth ?? 0;
@@ -554,59 +579,85 @@ export default class GameController {
     this.app.renderer.resize(width, height);
     this.app.stage.hitArea = new Rectangle(0, 0, width, height);
 
-    this.viewportController.setViewportSize(width, height);
+    const { width: worldWidth, height: worldHeight } = this.getWorldSize();
+    this.viewport.resize(width, height, worldWidth, worldHeight);
+    this.viewport.forceHitArea = new Rectangle(0, 0, width, height);
 
     if (fitToViewport) {
-      this.viewportController.fitToViewport(0.96, 1.0);
+      this.fitViewportToWorld();
+      return;
     }
 
-    this.applyViewportTransform();
+    this.updateVisibleWorldFromViewport();
   }
 
-  private applyViewportTransform(): void {
-    const { cameraX, cameraY, zoom } = this.viewportController.getState();
-    const { x: horizontalOffset, y: verticalOffset } = this.resolveBoardOffsets(zoom);
-    this.boardRenderer.container.scale.set(zoom);
-    this.boardRenderer.container.position.set(
-      horizontalOffset - cameraX * zoom,
-      verticalOffset - cameraY * zoom
-    );
-    this.boardRenderer.container.cullable = true;
-    this.boardRenderer.container.cullableChildren = true;
+  private handleViewportChanged = (): void => {
+    this.clampViewportCenter();
+    this.updateVisibleWorldFromViewport();
+  };
 
-    this.boardRenderer.updateVisibleWorld(
-      this.resolveVisibleWorld(cameraX, cameraY, zoom, horizontalOffset, verticalOffset)
-    );
+  private updateVisibleWorldFromViewport(): void {
+    if (!this.viewport) {
+      return;
+    }
+
+    const bounds = this.viewport.getVisibleBounds();
+    this.boardRenderer.updateVisibleWorld({
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height
+    });
   }
 
-  private resolveBoardOffsets(zoom: number): { x: number; y: number } {
-    const worldPixelWidth = this.cols * this.tileSize;
-    const worldPixelHeight = this.rows * this.tileSize;
+  private clampViewportCenter(): void {
+    if (!this.viewport) {
+      return;
+    }
 
+    const { width, height } = this.getWorldSize();
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    const center = this.viewport.center;
+    const clampedX = Math.min(width, Math.max(0, center.x));
+    const clampedY = Math.min(height, Math.max(0, center.y));
+
+    if (clampedX !== center.x || clampedY !== center.y) {
+      this.viewport.moveCenter(clampedX, clampedY);
+    }
+  }
+
+  private fitViewportToWorld(): void {
+    if (!this.viewport) {
+      return;
+    }
+
+    const { width, height } = this.getWorldSize();
+    if (width <= 0 || height <= 0) {
+      return;
+    }
+
+    const fitZoom = Math.min(
+      this.viewport.screenWidth / width,
+      this.viewport.screenHeight / height
+    );
+    const targetZoom = Math.max(fitZoom * this.fitPaddingRatio, this.fitMinZoom);
+    this.viewport.setZoom(this.clampScale(targetZoom), true);
+    this.viewport.moveCenter(width / 2, height / 2);
+    this.updateVisibleWorldFromViewport();
+  }
+
+  private getWorldSize(): { width: number; height: number } {
     return {
-      x: Math.max(0, (this.app.renderer.width - worldPixelWidth * zoom) / 2),
-      y: Math.max(0, (this.app.renderer.height - worldPixelHeight * zoom) / 2)
+      width: this.cols * this.tileSize,
+      height: this.rows * this.tileSize
     };
   }
 
-  private resolveVisibleWorld(
-    cameraX: number,
-    cameraY: number,
-    zoom: number,
-    horizontalOffset: number,
-    verticalOffset: number
-  ): { x: number; y: number; width: number; height: number } {
-    const startX = cameraX + (0 - horizontalOffset) / zoom;
-    const startY = cameraY + (0 - verticalOffset) / zoom;
-    const endX = cameraX + (this.app.renderer.width - horizontalOffset) / zoom;
-    const endY = cameraY + (this.app.renderer.height - verticalOffset) / zoom;
-
-    return {
-      x: Math.min(startX, endX),
-      y: Math.min(startY, endY),
-      width: Math.abs(endX - startX),
-      height: Math.abs(endY - startY)
-    };
+  private clampScale(scale: number): number {
+    return Math.min(this.maxZoom, Math.max(this.minZoom, scale));
   }
 
   private isWithinBoard(y: number, x: number): boolean {
@@ -629,7 +680,6 @@ export default class GameController {
     this.app.canvas.removeEventListener("touchmove", this.touchInputHandler.handleCanvasTouchMove);
     this.app.canvas.removeEventListener("touchend", this.touchInputHandler.handleCanvasTouchEnd);
     this.app.canvas.removeEventListener("touchcancel", this.touchInputHandler.handleCanvasTouchCancel);
-    this.app.canvas.removeEventListener("wheel", this.handleCanvasWheel);
     window.removeEventListener("mouseup", this.mouseInputHandler.handleWindowMouseUp);
     window.removeEventListener("mousemove", this.mouseInputHandler.handleWindowMouseMove);
     window.removeEventListener("resize", this.handleWindowResize);
@@ -638,6 +688,8 @@ export default class GameController {
     this.boardRenderer.clearPlayerCursors();
     this.playerId = 0;
     // this.app.destroy();
+    this.viewport?.destroy();
+    this.viewport = null;
     this.boardRenderer.destroy();
     this.initialized = false;
   }
