@@ -8,6 +8,11 @@ export default defineNuxtConfig({
   // debug: true,
 
   app: {
+    head: {
+      htmlAttrs: {
+        lang: "en",
+      },
+    },
     pageTransition: {
       name: "page",
       mode: "out-in"

@@ -45,9 +45,9 @@ export const useRouteGameConnection = () => {
     try {
       if (connectionType.value === "create") {
         const connectResponse = await wsClient.sendCreateGame(request);
-        await router.push(`/${connectResponse.gameId}`);
+        await navigateTo(`/${connectResponse.gameId}`);
       } else {
-        await router.push(`/${gameId.value}`);
+        await navigateTo(`/${gameId.value}`);
       }
     } catch (err: unknown) {
       wsClient.disconnect();

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { BoardSize, Difficulty } from '@saper/contracts';
+import QrCodeModal from './QrCodeModal.vue';
   
 const { boardSize, difficulty, customBoardWidth, customBoardHeight, customNumBombs } = useGameSetupState();
 

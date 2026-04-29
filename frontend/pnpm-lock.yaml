@@ -38,6 +38,9 @@ importers:
       pinia:
         specifier: ^3.0.4
         version: 3.0.4(typescript@6.0.2)(vue@3.5.32(typescript@6.0.2))
+      pixi-viewport:
+        specifier: ^6.0.3
+        version: 6.0.3(pixi.js@8.18.1)
       pixi.js:
         specifier: ^8.17.1
         version: 8.18.1
@@ -50,6 +53,9 @@ importers:
       vue:
         specifier: ^3.5.32
         version: 3.5.32(typescript@6.0.2)
+      vue-qr:
+        specifier: ^5.0.3
+        version: 5.0.3(vue@3.5.32(typescript@6.0.2))
       vue-router:
         specifier: ^5.0.4
         version: 5.0.4(@vue/compiler-sfc@3.5.32)(pinia@3.0.4(typescript@6.0.2)(vue@3.5.32(typescript@6.0.2)))(vue@3.5.32(typescript@6.0.2))
@@ -3565,6 +3571,11 @@ packages:
       typescript:
         optional: true
 
+  pixi-viewport@6.0.3:
+    resolution: {integrity: sha512-2+qPJ0/n+8hQYhWvY+795+x9y3MiUrCOWacK0DY53whowWaGdx9iDocy7z1pBwjkZhC52YvrJQuZKK0sdVLtBw==}
+    peerDependencies:
+      pixi.js: '>=8'
+
   pixi.js@8.18.1:
     resolution: {integrity: sha512-6LUPWYgulZhp/w4kam2XHXB0QedISZIqrJbRdHLLQ3csn5a38uzKxAp6B5j6s89QFYaIJbg95kvgTRcbgpO1ow==}
 
@@ -4467,6 +4478,11 @@ packages:
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
     peerDependencies:
       eslint: ^8.57.0 || ^9.0.0 || ^10.0.0
+
+  vue-qr@5.0.3:
+    resolution: {integrity: sha512-XBmBXBf8YDGttlbSf6B5kdPM5IT1pCt50tmZwBQkivWLi8CId5HDKTNyXY9KuhTIDoj/IKc62fTyjLzZs8wOCA==}
+    peerDependencies:
+      vue: ^3.3.0
 
   vue-router@5.0.4:
     resolution: {integrity: sha512-lCqDLCI2+fKVRl2OzXuzdSWmxXFLQRxQbmHugnRpTMyYiT+hNaycV0faqG5FBHDXoYrZ6MQcX87BvbY8mQ20Bg==}
@@ -8300,6 +8316,10 @@ snapshots:
     optionalDependencies:
       typescript: 6.0.2
 
+  pixi-viewport@6.0.3(pixi.js@8.18.1):
+    dependencies:
+      pixi.js: 8.18.1
+
   pixi.js@8.18.1:
     dependencies:
       '@pixi/colord': 2.9.6
@@ -9188,6 +9208,10 @@ snapshots:
       semver: 7.7.4
     transitivePeerDependencies:
       - supports-color
+
+  vue-qr@5.0.3(vue@3.5.32(typescript@6.0.2)):
+    dependencies:
+      vue: 3.5.32(typescript@6.0.2)
 
   vue-router@5.0.4(@vue/compiler-sfc@3.5.32)(pinia@3.0.4(typescript@6.0.2)(vue@3.5.32(typescript@6.0.2)))(vue@3.5.32(typescript@6.0.2)):
     dependencies:
