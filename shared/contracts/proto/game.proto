@@ -49,7 +49,6 @@ message CreateGameRequest {
   uint32 custom_num_bombs = 5;
 }
 
-// Joins an already existing game session by id.
 message JoinGameRequest {
   uint32 requested_game_id = 1;
 }

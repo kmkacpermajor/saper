@@ -47,7 +47,7 @@ const onConnect = async (): Promise<void> => {
 
     </div>
 
-    <div v-if="connectionType === 'create'" class="space-x-8 flex justify-between">
+    <div v-show="connectionType === 'create'" class="space-x-8 flex justify-between">
       <div class="space-y-2">
         <div>
           <label class="mb-1 block text-sm font-medium text-gray-700 dark:text-slate-300">Board Size</label>
@@ -92,7 +92,7 @@ const onConnect = async (): Promise<void> => {
 
     </div>
 
-    <input v-if="connectionType === 'join'" v-model="gameId" placeholder="Enter Game ID" @keyup.enter="onConnect"
+    <input v-show="connectionType === 'join'" v-model="gameId" placeholder="Enter Game ID" @keyup.enter="onConnect"
       class="w-full rounded-md border px-4 py-2 focus:border-blue-500 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400" />
 
     <button @click="onConnect" :disabled="connecting"

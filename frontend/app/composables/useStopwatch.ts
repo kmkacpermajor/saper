@@ -1,5 +1,4 @@
 import { ref, onUnmounted } from 'vue';
-// import { formatTime } from '@/utils/formatTime';
 
 export const useStopwatch = () => {
   const timerElement = ref<HTMLElement | null>(null);
@@ -31,11 +30,9 @@ export const useStopwatch = () => {
     animationFrameId = requestAnimationFrame(tick);
   };
 
-  // NOWA FUNKCJA: Zatrzymuje timer i ustawia sztywną wartość
   const freezeAt = (exactTimeMs: number) => {
-    stop(); // Ubijamy pętlę
+    stop();
     if (timerElement.value) {
-      // Wpisujemy na sztywno czas z serwera
       timerElement.value.textContent = `${formatTime(exactTimeMs)}`;
     }
   };
@@ -45,5 +42,5 @@ export const useStopwatch = () => {
     timerElement.value = null;
   });
 
-  return { timerElement, start, stop, freezeAt }; // Eksportujemy freezeAt
+  return { timerElement, start, stop, freezeAt };
 };

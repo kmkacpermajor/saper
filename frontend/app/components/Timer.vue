@@ -4,7 +4,6 @@ const gameSession = useGameSession();
 const { timerElement, start, stop, freezeAt } = useStopwatch();
 
 watch(
-  // Obserwujemy czas, status działania i naszą nową flagę pierwszego ruchu
   () => [
     gameSession.currentGameTimeMs.value, 
     gameSession.gameRunning.value, 
@@ -15,17 +14,14 @@ watch(
 
       if (timeMs > 0) {
         if (isRunning) {
-          // Gra jest w trakcie, aktualizujemy timer
           start(timeMs);
         } else {
-          // Serwer przysłał końcowy czas -> zamrażamy
           freezeAt(timeMs);
         }
         return;
       }
 
       if (firstMoveMade && isRunning) {
-        // Gracz kliknął pierwszą płytkę! Odpalamy timer!
         start(0);
         return;
       }

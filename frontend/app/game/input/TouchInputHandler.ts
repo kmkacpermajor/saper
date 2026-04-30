@@ -166,7 +166,6 @@ export default class TouchInputHandler {
     const movedDistance = Math.hypot(touch.clientX - startPoint.x, touch.clientY - startPoint.y);
     if (movedDistance > TOUCH_MOVE_TOLERANCE_PX) {
       if (!this.panActive) {
-        // this.cancelTouchGesture(true);
         this.clearTouchLongPressTimer();
       }
       this.panActive = true;
