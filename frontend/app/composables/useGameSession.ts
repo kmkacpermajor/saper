@@ -9,10 +9,12 @@ export const useGameSession = () => {
   const currentGameState = useState<GameState>("game:state", () => GameState.DISCONNECTED);
   const currentNumBombs = useState<number>("game:num-bombs", () => 0);
   const currentPlayerId = useState<number>("game:player-id", () => 0);
-  const currentGameTimeMs = useState<number>("game:game-time-ms", () => 0);
-  const gameController = useState<GameController | null>("game:controller", () => null);
+  const currentGameTimeMs = useState<number | null>("game:game-time-ms", () => null);
+  const gameController = shallowRef<GameController | null>(null);
+  const firstMoveMade = useState<boolean>("game:first-move", () => false);
 
-  const gameRunning = computed(() => currentGameState.value >= GameState.IN_PROGRESS);
+  const gameStarted = computed(() => currentGameState.value >= GameState.IN_PROGRESS);
+  const gameRunning = computed(() => currentGameState.value === GameState.IN_PROGRESS);
 
   const gameStatusMessage = computed(() => {
     if (currentGameState.value === GameState.CONNECTING) return "Connecting...";
@@ -27,6 +29,7 @@ export const useGameSession = () => {
     currentNumBombs.value = 0;
     currentPlayerId.value = 0;
     currentGameTimeMs.value = 0;
+    firstMoveMade.value = false;
   };
 
   const applyGameUpdateEvent = (event: GameEvent): void => {
@@ -46,6 +49,10 @@ export const useGameSession = () => {
 
     if (event.type === GAME_EVENT_TYPE.GAME_TIME_MS_UPDATE) {
       currentGameTimeMs.value = event.payload;
+    }
+
+    if (event.type === GAME_EVENT_TYPE.FIRST_MOVE_UPDATE) {
+      firstMoveMade.value = event.payload;
     }
   };
 
@@ -116,11 +123,13 @@ export const useGameSession = () => {
     zoomIn,
     zoomOut,
     centerViewport,
-    gameRunning,
+    gameStarted,
     currentGameState,
     currentNumBombs,
     currentPlayerId,
     currentGameTimeMs,
-    gameStatusMessage
+    gameStatusMessage,
+    firstMoveMade,
+    gameRunning
   };
 };

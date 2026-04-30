@@ -129,11 +129,11 @@ export default class Game {
       return;
     }
 
-    this.messageSender.sendRevealTiles(combinedTilesToReveal);
-
     if (firstMove) {
       this.gameStartTime = Date.now();
     }
+
+    this.messageSender.sendRevealTiles(combinedTilesToReveal);
 
     if (combinedTilesToReveal.some((tile: TileUpdate) => tile.type === TileType.MINE)) {
       this.endGame(GameState.LOST);

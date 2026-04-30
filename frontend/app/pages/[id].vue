@@ -1,7 +1,7 @@
 <script setup lang="ts">
 
 const gameCanvasContainer = ref<HTMLDivElement | null>(null);
-const { routeGameId, gameRunning, connectFromRoute, disconnectRouteGame } = useGameConnection();
+const { routeGameId, gameStarted, connectFromRoute, disconnectRouteGame } = useGameConnection();
 const isQrCodeOpen = ref(false);
 
 onMounted(async () => {
@@ -24,7 +24,7 @@ onBeforeUnmount(() => {
 
         <div ref="gameCanvasContainer" id="gameCanvasContainer" class="h-full w-full touch-none select-none ">
             <Transition name="canvas-loading">
-                <div v-if="!gameRunning"
+                <div v-if="!gameStarted"
                     class="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-100/65 backdrop-blur-[1px] dark:bg-slate-900/65">
                     <div class="h-10 w-10 animate-spin rounded-full border-4 border-slate-400 border-t-slate-700 dark:border-slate-600 dark:border-t-slate-100"
                         role="status" aria-label="Connecting to game"></div>

@@ -49,7 +49,8 @@ export default class MessageSender {
           numBombs: game.numBombs,
           playerId,
           difficulty: game.difficulty,
-          boardSize: game.boardSize
+          boardSize: game.boardSize,
+          gameTimeMs: game.gameStartTime ? Date.now() - game.gameStartTime! : 0,
         }
       }
     });

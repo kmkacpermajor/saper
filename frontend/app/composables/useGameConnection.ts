@@ -63,7 +63,7 @@ export const useGameConnection = () => {
     connecting,
     connectFromSetup,
     routeGameId,
-    gameRunning: gameSession.gameRunning,
+    gameStarted: gameSession.gameStarted,
     connectFromRoute,
     disconnectRouteGame: () => gameSession.disconnect(),
   };

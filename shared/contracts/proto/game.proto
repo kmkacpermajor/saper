@@ -101,6 +101,7 @@ message ConnectResponse {
   uint32 player_id = 5;
   Difficulty difficulty = 6;
   BoardSize board_size = 7;
+  uint32 game_time_ms = 8;
 }
 
 message RevealTilesResponse {
@@ -109,7 +110,7 @@ message RevealTilesResponse {
 
 message GameOverResponse {
   GameState state = 1;
-  uint32 gameTimeMs = 2;
+  uint32 game_time_ms = 2;
 }
 
 message LeaderboardEntry {

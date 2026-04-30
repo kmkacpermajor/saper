@@ -199,6 +199,10 @@ export interface ConnectResponse {
      * @generated from protobuf field: saper.BoardSize board_size = 7
      */
     boardSize: BoardSize;
+    /**
+     * @generated from protobuf field: uint32 game_time_ms = 8
+     */
+    gameTimeMs: number;
 }
 /**
  * @generated from protobuf message saper.RevealTilesResponse
@@ -218,7 +222,7 @@ export interface GameOverResponse {
      */
     state: GameState;
     /**
-     * @generated from protobuf field: uint32 gameTimeMs = 2
+     * @generated from protobuf field: uint32 game_time_ms = 2
      */
     gameTimeMs: number;
 }
@@ -1029,7 +1033,8 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
             { no: 4, name: "num_bombs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 5, name: "player_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 6, name: "difficulty", kind: "enum", T: () => ["saper.Difficulty", Difficulty, "DIFFICULTY_"] },
-            { no: 7, name: "board_size", kind: "enum", T: () => ["saper.BoardSize", BoardSize, "BOARD_SIZE_"] }
+            { no: 7, name: "board_size", kind: "enum", T: () => ["saper.BoardSize", BoardSize, "BOARD_SIZE_"] },
+            { no: 8, name: "game_time_ms", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
     create(value?: PartialMessage<ConnectResponse>): ConnectResponse {
@@ -1041,6 +1046,7 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
         message.playerId = 0;
         message.difficulty = 0;
         message.boardSize = 0;
+        message.gameTimeMs = 0;
         if (value !== undefined)
             reflectionMergePartial<ConnectResponse>(this, message, value);
         return message;
@@ -1070,6 +1076,9 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
                     break;
                 case /* saper.BoardSize board_size */ 7:
                     message.boardSize = reader.int32();
+                    break;
+                case /* uint32 game_time_ms */ 8:
+                    message.gameTimeMs = reader.uint32();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -1104,6 +1113,9 @@ class ConnectResponse$Type extends MessageType<ConnectResponse> {
         /* saper.BoardSize board_size = 7; */
         if (message.boardSize !== 0)
             writer.tag(7, WireType.Varint).int32(message.boardSize);
+        /* uint32 game_time_ms = 8; */
+        if (message.gameTimeMs !== 0)
+            writer.tag(8, WireType.Varint).uint32(message.gameTimeMs);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -1166,7 +1178,7 @@ class GameOverResponse$Type extends MessageType<GameOverResponse> {
     constructor() {
         super("saper.GameOverResponse", [
             { no: 1, name: "state", kind: "enum", T: () => ["saper.GameState", GameState, "GAME_STATE_"] },
-            { no: 2, name: "gameTimeMs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+            { no: 2, name: "game_time_ms", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
         ]);
     }
     create(value?: PartialMessage<GameOverResponse>): GameOverResponse {
@@ -1185,7 +1197,7 @@ class GameOverResponse$Type extends MessageType<GameOverResponse> {
                 case /* saper.GameState state */ 1:
                     message.state = reader.int32();
                     break;
-                case /* uint32 gameTimeMs */ 2:
+                case /* uint32 game_time_ms */ 2:
                     message.gameTimeMs = reader.uint32();
                     break;
                 default:
@@ -1203,7 +1215,7 @@ class GameOverResponse$Type extends MessageType<GameOverResponse> {
         /* saper.GameState state = 1; */
         if (message.state !== 0)
             writer.tag(1, WireType.Varint).int32(message.state);
-        /* uint32 gameTimeMs = 2; */
+        /* uint32 game_time_ms = 2; */
         if (message.gameTimeMs !== 0)
             writer.tag(2, WireType.Varint).uint32(message.gameTimeMs);
         let u = options.writeUnknownFields;

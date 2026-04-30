@@ -1,5 +1,5 @@
 import { Application, Rectangle } from "pixi.js";
-import { TileUpdate ,GameState, TileType, type ServerMessage, type TileCoordinates, BoardSize, Difficulty } from "@saper/contracts";
+import { TileUpdate ,GameState, TileType, type ServerMessage, type TileCoordinates, BoardSize, Difficulty, ConnectResponse } from "@saper/contracts";
 import log from "~/utils/logger";
 import BoardRenderer from "./boardRenderer";
 import { GAME_EVENT_TYPE, type GameEvent } from "./gameEvents";
@@ -25,6 +25,7 @@ export default class GameController {
   private _numBombs: number = 0;
   private _playerId: number = 0;
   private _gameTimeMs: number = 0;
+  private _firstMoveMade: boolean = false;
 
   private initialized: boolean = false;
   private rows: number = 0;
@@ -77,6 +78,15 @@ export default class GameController {
     this.emitEvent(GAME_EVENT_TYPE.GAME_TIME_MS_UPDATE, value);
   }
 
+  get firstMoveMade(): boolean {
+    return this._firstMoveMade;
+  }
+
+  set firstMoveMade(value: boolean) {
+    this._firstMoveMade = value;
+    this.emitEvent(GAME_EVENT_TYPE.FIRST_MOVE_UPDATE, value);
+  }
+
   emitEvent<T extends GameEvent["type"]>(
     type: T,
     payload: Extract<GameEvent, { type: T }>["payload"]
@@ -120,12 +130,16 @@ export default class GameController {
     switch (message.payload.oneofKind) {
       case "connect": {
         const payload = message.payload.connect;
-        this.applyConnected(payload.gameId, payload.playerId, payload.rows, payload.cols, payload.numBombs, payload.difficulty, payload.boardSize);
+        this.applyConnected(payload);
         return;
       }
 
       case "revealTiles": {
         const revealUpdates: Array<{ y: number; x: number; type: TileType }> = [];
+
+        if (!this.firstMoveMade) {
+          this.firstMoveMade = true;
+        }
 
         for (const tile of message.payload.revealTiles.tiles) {
           if (!this.isTileType(tile.type)) {
@@ -184,18 +198,19 @@ export default class GameController {
     }
   };
 
-  applyConnected(gameId: number, playerId: number, rows: number, cols: number, bombs: number, difficulty: Difficulty, boardSize: BoardSize): void {
-    this.gameId = gameId;
-    this.playerId = playerId;
-    this.rows = rows;
-    this.cols = cols;
-    this.boardState = this.initializeBoard(rows, cols);
-    this.numBombs = bombs;
-    this.initialNumBombs = bombs;
-    this.difficulty = difficulty;
-    this.boardSize = boardSize;
+  applyConnected(payload: ConnectResponse): void {
+    this.gameId = payload.gameId;
+    this.playerId = payload.playerId;
+    this.rows = payload.rows;
+    this.cols = payload.cols;
+    this.boardState = this.initializeBoard(this.rows, this.cols);
+    this.numBombs = payload.numBombs;
+    this.initialNumBombs = payload.numBombs;
+    this.difficulty = payload.difficulty;
+    this.boardSize = payload.boardSize;
+    this.gameTimeMs = payload.gameTimeMs;
 
-    this.boardRenderer.setupBoard(rows, cols);
+    this.boardRenderer.setupBoard(this.rows, this.cols);
     this.boardRenderer.clearPlayerCursors();
     this.viewportController.setWorldSize(this.cols * this.tileSize, this.rows * this.tileSize);
     this.updateViewportFromContainer(true);
@@ -637,8 +652,8 @@ export default class GameController {
     this.touchInputHandler.reset();
     this.boardRenderer.clearPlayerCursors();
     this.playerId = 0;
-    // this.app.destroy();
     this.boardRenderer.destroy();
+    this.app.destroy(true, { children: true, texture: false });
     this.initialized = false;
   }
 }
