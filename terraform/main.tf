@@ -31,9 +31,46 @@ locals {
   vpc_peering_range_prefix    = 16
 }
 
+resource "google_project_service" "compute" {
+  project            = var.project_id
+  service            = "compute.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "sqladmin" {
+  project            = var.project_id
+  service            = "sqladmin.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "run" {
+  project            = var.project_id
+  service            = "run.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "pubsub" {
+  project            = var.project_id
+  service            = "pubsub.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "servicenetworking" {
+  project            = var.project_id
+  service            = "servicenetworking.googleapis.com"
+  disable_on_destroy = false
+}
+
+resource "google_project_service" "vpcaccess" {
+  project            = var.project_id
+  service            = "vpcaccess.googleapis.com"
+  disable_on_destroy = false
+}
+
 resource "google_compute_network" "main" {
   name                    = local.vpc_name
   auto_create_subnetworks = false
+  depends_on              = [google_project_service.compute]
 }
 
 resource "google_compute_subnetwork" "main" {
@@ -56,6 +93,7 @@ resource "google_service_networking_connection" "private_services" {
   network                 = google_compute_network.main.id
   service                 = "servicenetworking.googleapis.com"
   reserved_peering_ranges = [google_compute_global_address.private_services.name]
+  depends_on              = [google_project_service.servicenetworking]
 }
 
 resource "google_vpc_access_connector" "serverless" {
@@ -63,6 +101,7 @@ resource "google_vpc_access_connector" "serverless" {
   region        = var.region
   network       = google_compute_network.main.id
   ip_cidr_range = local.vpc_connector_cidr
+  depends_on    = [google_project_service.vpcaccess]
 }
 
 resource "google_pubsub_topic" "game_results" {
@@ -360,5 +399,29 @@ resource "google_project_iam_member" "default_compute_service_account_user" {
 resource "google_project_iam_member" "default_compute_storage_object_viewer" {
   project = var.project_id
   role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_vpcaccess_admin" {
+  project = var.project_id
+  role    = "roles/vpcaccess.admin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_servicenetworking_admin" {
+  project = var.project_id
+  role    = "roles/servicenetworking.networksAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_compute_network_admin" {
+  project = var.project_id
+  role    = "roles/compute.networkAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_serviceusage_admin" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageAdmin"
   member  = "serviceAccount:${var.service_account}"
 }
