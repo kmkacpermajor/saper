@@ -134,8 +134,8 @@ resource "google_sql_database_instance" "leaderboard" {
     }
 
     ip_configuration {
-      ipv4_enabled  = false
-      private_network = google_compute_network.main.id
+      ipv4_enabled    = false
+      private_network = google_compute_network.main.id 
     }
   }
 
