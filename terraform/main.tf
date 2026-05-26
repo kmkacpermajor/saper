@@ -16,11 +16,53 @@ locals {
   leaderboard_port            = 8090
   pubsub_topic_name           = "game-results"
   pubsub_subscription_name    = "leaderboard-game-results"
+  psc_network_name            = "saper-psc-network"
+  psc_subnet_name             = "saper-psc-subnet"
+  psc_subnet_cidr             = "10.20.0.0/24"
+  psc_connector_name          = "saper-psc-connector"
+  psc_connector_cidr          = "10.20.1.0/28"
+  psc_endpoint_name           = "saper-leaderboard-psc"
   database_instance_name      = "saper-leaderboard-postgres"
   database_name               = "minesweeper"
   database_user               = "minesweeper"
   database_connection_string  = "${var.project_id}:${var.region}:${local.database_instance_name}"
-  database_url                = "postgresql://${local.database_user}:${urlencode(var.database_password)}@/${local.database_name}?host=/cloudsql/${local.database_connection_string}"
+  database_url                = "postgresql://${local.database_user}:${urlencode(var.database_password)}@${google_compute_address.leaderboard_psc.address}:5432/${local.database_name}"
+}
+
+resource "google_compute_network" "psc" {
+  name                    = local.psc_network_name
+  auto_create_subnetworks = false
+}
+
+resource "google_compute_subnetwork" "psc" {
+  name          = local.psc_subnet_name
+  region        = var.region
+  network       = google_compute_network.psc.id
+  ip_cidr_range = local.psc_subnet_cidr
+}
+
+resource "google_vpc_access_connector" "psc" {
+  name          = local.psc_connector_name
+  region        = var.region
+  network       = google_compute_network.psc.name
+  ip_cidr_range = local.psc_connector_cidr
+}
+
+resource "google_compute_address" "leaderboard_psc" {
+  name         = local.psc_endpoint_name
+  region       = var.region
+  subnetwork   = google_compute_subnetwork.psc.id
+  address_type = "INTERNAL"
+}
+
+resource "google_compute_forwarding_rule" "leaderboard_psc" {
+  name                  = local.psc_endpoint_name
+  region                = var.region
+  network               = google_compute_network.psc.id
+  subnetwork            = google_compute_subnetwork.psc.id
+  load_balancing_scheme = "INTERNAL"
+  ip_address            = google_compute_address.leaderboard_psc.address
+  target                = google_sql_database_instance.leaderboard.psc_service_attachment_link
 }
 
 resource "google_pubsub_topic" "game_results" {
@@ -49,6 +91,11 @@ resource "google_sql_database_instance" "leaderboard" {
 
     ip_configuration {
       ipv4_enabled = false
+
+      psc_config {
+        psc_enabled               = true
+        allowed_consumer_projects = [var.project_id]
+      }
     }
   }
 
@@ -123,12 +170,9 @@ resource "google_cloud_run_v2_service" "leaderboard" {
       max_instance_count = 1
     }
 
-    volumes {
-      name = "cloudsql"
-
-      cloud_sql_instance {
-        instances = [local.database_connection_string]
-      }
+    vpc_access {
+      connector = google_vpc_access_connector.psc.id
+      egress    = "ALL_TRAFFIC"
     }
 
     containers {
@@ -166,11 +210,6 @@ resource "google_cloud_run_v2_service" "leaderboard" {
       env {
         name  = "DATABASE_URL"
         value = local.database_url
-      }
-
-      volume_mounts {
-        name       = "cloudsql"
-        mount_path = "/cloudsql"
       }
     }
   }
@@ -310,5 +349,11 @@ resource "google_project_iam_member" "default_compute_service_account_user" {
 resource "google_project_iam_member" "default_compute_storage_object_viewer" {
   project = var.project_id
   role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_vpc_access_user" {
+  project = var.project_id
+  role    = "roles/vpcaccess.user"
   member  = "serviceAccount:${var.service_account}"
 }
