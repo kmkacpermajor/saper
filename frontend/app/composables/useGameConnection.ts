@@ -21,11 +21,11 @@ export const useGameConnection = () => {
     await router.replace("/");
   };
 
-  const connectFromRoute = async (container: HTMLDivElement | null): Promise<void> => {
+  const connectFromRoute = async (container: HTMLDivElement | null, username: string): Promise<void> => {
     loadingIndicator.start({ force: true });
 
     try {
-      await gameSession.connectJoinGame(routeGameId.value, container);
+      await gameSession.connectJoinGame(routeGameId.value, container, username);
     } catch (err: unknown) {
       const message = getErrorMessage(err, "Unknown game connection error.");
       await redirectToIndexWithError(message);

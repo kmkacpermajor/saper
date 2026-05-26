@@ -34,6 +34,10 @@ export interface CreateGameRequest {
      * @generated from protobuf field: uint32 custom_num_bombs = 5
      */
     customNumBombs: number;
+    /**
+     * @generated from protobuf field: string username = 6
+     */
+    username: string;
 }
 /**
  * Joins an already existing game session by id.
@@ -45,6 +49,10 @@ export interface JoinGameRequest {
      * @generated from protobuf field: uint32 requested_game_id = 1
      */
     requestedGameId: number;
+    /**
+     * @generated from protobuf field: string username = 2
+     */
+    username: string;
 }
 /**
  * @generated from protobuf message saper.TileCoordinates
@@ -485,7 +493,8 @@ class CreateGameRequest$Type extends MessageType<CreateGameRequest> {
             { no: 2, name: "board_size", kind: "enum", T: () => ["saper.BoardSize", BoardSize, "BOARD_SIZE_"] },
             { no: 3, name: "custom_rows", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
             { no: 4, name: "custom_cols", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
-            { no: 5, name: "custom_num_bombs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+            { no: 5, name: "custom_num_bombs", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 6, name: "username", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<CreateGameRequest>): CreateGameRequest {
@@ -495,6 +504,7 @@ class CreateGameRequest$Type extends MessageType<CreateGameRequest> {
         message.customRows = 0;
         message.customCols = 0;
         message.customNumBombs = 0;
+        message.username = "";
         if (value !== undefined)
             reflectionMergePartial<CreateGameRequest>(this, message, value);
         return message;
@@ -518,6 +528,9 @@ class CreateGameRequest$Type extends MessageType<CreateGameRequest> {
                     break;
                 case /* uint32 custom_num_bombs */ 5:
                     message.customNumBombs = reader.uint32();
+                    break;
+                case /* string username */ 6:
+                    message.username = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -546,6 +559,9 @@ class CreateGameRequest$Type extends MessageType<CreateGameRequest> {
         /* uint32 custom_num_bombs = 5; */
         if (message.customNumBombs !== 0)
             writer.tag(5, WireType.Varint).uint32(message.customNumBombs);
+        /* string username = 6; */
+        if (message.username !== "")
+            writer.tag(6, WireType.LengthDelimited).string(message.username);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);
@@ -560,12 +576,14 @@ export const CreateGameRequest = new CreateGameRequest$Type();
 class JoinGameRequest$Type extends MessageType<JoinGameRequest> {
     constructor() {
         super("saper.JoinGameRequest", [
-            { no: 1, name: "requested_game_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ }
+            { no: 1, name: "requested_game_id", kind: "scalar", T: 13 /*ScalarType.UINT32*/ },
+            { no: 2, name: "username", kind: "scalar", T: 9 /*ScalarType.STRING*/ }
         ]);
     }
     create(value?: PartialMessage<JoinGameRequest>): JoinGameRequest {
         const message = globalThis.Object.create((this.messagePrototype!));
         message.requestedGameId = 0;
+        message.username = "";
         if (value !== undefined)
             reflectionMergePartial<JoinGameRequest>(this, message, value);
         return message;
@@ -577,6 +595,9 @@ class JoinGameRequest$Type extends MessageType<JoinGameRequest> {
             switch (fieldNo) {
                 case /* uint32 requested_game_id */ 1:
                     message.requestedGameId = reader.uint32();
+                    break;
+                case /* string username */ 2:
+                    message.username = reader.string();
                     break;
                 default:
                     let u = options.readUnknownField;
@@ -593,6 +614,9 @@ class JoinGameRequest$Type extends MessageType<JoinGameRequest> {
         /* uint32 requested_game_id = 1; */
         if (message.requestedGameId !== 0)
             writer.tag(1, WireType.Varint).uint32(message.requestedGameId);
+        /* string username = 2; */
+        if (message.username !== "")
+            writer.tag(2, WireType.LengthDelimited).string(message.username);
         let u = options.writeUnknownFields;
         if (u !== false)
             (u == true ? UnknownFieldHandler.onWrite : u)(this.typeName, message, writer);

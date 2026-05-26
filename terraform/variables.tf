@@ -22,3 +22,14 @@ variable "frontend_image" {
   type        = string
   description = "Frontend image reference with digest."
 }
+
+variable "leaderboard_image" {
+  type        = string
+  description = "Leaderboard backend image reference with digest."
+}
+
+variable "database_password" {
+  type        = string
+  description = "Password for the leaderboard PostgreSQL user."
+  sensitive   = true
+}

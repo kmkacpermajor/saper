@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { BoardSize, Difficulty } from '@saper/contracts';
   
-const { boardSize, difficulty, customBoardWidth, customBoardHeight, customNumBombs } = useGameSetupState();
+const { boardSize, difficulty, customBoardWidth, customBoardHeight, customNumBombs, username } = useGameSetupState();
 
 const maxBombs = computed(() => Math.floor(customBoardWidth.value * customBoardHeight.value * 0.35));
 
@@ -14,7 +14,8 @@ const onConnect = async (): Promise<void> => {
     customCols: customBoardWidth.value,
     customNumBombs: customNumBombs.value,
     difficulty: difficulty.value,
-    boardSize: boardSize.value
+    boardSize: boardSize.value,
+    username: username.value
   });
 };
 </script>
@@ -91,6 +92,9 @@ const onConnect = async (): Promise<void> => {
       </div>
 
     </div>
+
+    <input v-model="username" placeholder="Username" maxlength="40" @keyup.enter="onConnect"
+      class="w-full rounded-md border px-4 py-2 focus:border-blue-500 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400" />
 
     <input v-show="connectionType === 'join'" v-model="gameId" placeholder="Enter Game ID" @keyup.enter="onConnect"
       class="w-full rounded-md border px-4 py-2 focus:border-blue-500 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:placeholder-slate-400" />

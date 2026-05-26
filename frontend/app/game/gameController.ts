@@ -96,7 +96,7 @@ export default class GameController {
     }, 0);
   }
 
-  async init(requestedGameId: number): Promise<void> {
+  async init(requestedGameId: number, username: string): Promise<void> {
     if (this.initialized) {
       return;
     }
@@ -108,7 +108,8 @@ export default class GameController {
 
     const joinGameResponse = await this.wsClient.sendJoinGame(
       {
-        requestedGameId
+        requestedGameId,
+        username
       },
       this.handleReceivedServerMessage
     );

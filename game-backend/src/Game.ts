@@ -1,11 +1,23 @@
 import { BoardSize, Difficulty, GameState, TileType, type TileCoordinates, type TileUpdate } from "@saper/contracts";
 import type { WebSocket } from "ws";
 import Board from "./Board.js";
+import LeaderboardPublisher, { resolveLevelCode } from "./LeaderboardPublisher.js";
 import MessageSender from "./MessageSender.js";
 import PlayerIdentityRegistry from "./PlayerIdentityRegistry.js";
 import { log } from "./logger.js";
 
 const MAX_ZERO_START_RETRIES = 8;
+const leaderboardPublisher = new LeaderboardPublisher();
+const DEFAULT_USERNAME = "Anonymous";
+
+const normalizeUsername = (username: string): string => {
+  const trimmedUsername = username.trim();
+  if (!trimmedUsername) {
+    return DEFAULT_USERNAME;
+  }
+
+  return trimmedUsername.slice(0, 40);
+};
 
 export default class Game {
   readonly messageSender: MessageSender;
@@ -19,8 +31,12 @@ export default class Game {
     this.messageSender = new MessageSender(onAllClientsDisconnected);
   }
 
-  registerPlayer(ws: WebSocket): number {
-    return this.playerIdentityRegistry.assignPlayerId(ws);
+  registerPlayer(ws: WebSocket, username: string): number {
+    return this.playerIdentityRegistry.assignPlayerId(ws, normalizeUsername(username));
+  }
+
+  getPlayerNames(): string[] {
+    return this.playerIdentityRegistry.getPlayerNames();
   }
 
   getPlayerId(ws: WebSocket): number | null {
@@ -82,11 +98,27 @@ export default class Game {
         this.messageSender.sendRevealTiles(revealUpdates);
       }
 
-        this.board.gameEnded = true;
-        this.board.gameWon = state === GameState.WON;
-        const gameTimeMs = Date.now() - this.gameStartTime!;
-        this.messageSender.sendGameOver(state, gameTimeMs);
-        log.warn(`Game ${this.gameId} ended. State: ${state}, Time: ${gameTimeMs}ms, Bombs: ${this.board.numBombs}, Flagged Bombs: ${this.board.numOfFlaggedBombs()}`);
+      this.board.gameEnded = true;
+      this.board.gameWon = state === GameState.WON;
+      const gameTimeMs = Date.now() - this.gameStartTime!;
+      this.messageSender.sendGameOver(state, gameTimeMs);
+
+      if (state === GameState.WON) {
+        const levelCode = resolveLevelCode(this.boardSize, this.difficulty);
+        if (levelCode) {
+          void leaderboardPublisher.publishGameResult({
+            gameId: this.gameId,
+            levelCode,
+            playerNames: this.getPlayerNames(),
+            timeMs: gameTimeMs,
+            difficulty: this.difficulty,
+            boardSize: this.boardSize,
+            completedAt: new Date().toISOString()
+          });
+        }
+      }
+
+      log.warn(`Game ${this.gameId} ended. State: ${state}, Time: ${gameTimeMs}ms, Bombs: ${this.board.numBombs}, Flagged Bombs: ${this.board.numOfFlaggedBombs()}`);
     }
   }
 

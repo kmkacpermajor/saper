@@ -47,10 +47,12 @@ message CreateGameRequest {
   uint32 custom_rows = 3;
   uint32 custom_cols = 4;
   uint32 custom_num_bombs = 5;
+  string username = 6;
 }
 
 message JoinGameRequest {
   uint32 requested_game_id = 1;
+  string username = 2;
 }
 
 message TileCoordinates {

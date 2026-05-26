@@ -67,7 +67,7 @@ export const useGameSession = () => {
     gameController.value = null;
   };
 
-  const connectJoinGame = async (id: string, container: HTMLDivElement | null): Promise<void> => {
+  const connectJoinGame = async (id: string, container: HTMLDivElement | null, username: string): Promise<void> => {
     if (currentGameState.value === GameState.CONNECTING) {
       return;
     }
@@ -85,7 +85,7 @@ export const useGameSession = () => {
       wsClient.disconnect();
 
       const controller = new GameController(applyGameUpdateEvent, wsClient);
-      await controller.init(requestedGameId);
+      await controller.init(requestedGameId, username);
       gameController.value = controller;
 
       container.appendChild(controller.app.canvas);
