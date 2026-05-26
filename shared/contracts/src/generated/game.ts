@@ -40,8 +40,6 @@ export interface CreateGameRequest {
     username: string;
 }
 /**
- * Joins an already existing game session by id.
- *
  * @generated from protobuf message saper.JoinGameRequest
  */
 export interface JoinGameRequest {
