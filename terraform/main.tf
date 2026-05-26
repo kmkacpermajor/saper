@@ -44,11 +44,6 @@ import {
 }
 
 import {
-  to = google_cloud_run_v2_service.leaderboard
-  id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/services/saper-leaderboard"
-}
-
-import {
   to = google_service_networking_connection.private_services
   id = "projects/project-2f244773-46f8-4097-afe/global/networks/saper-vpc:servicenetworking.googleapis.com"
 }
