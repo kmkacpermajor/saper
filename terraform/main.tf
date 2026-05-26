@@ -62,6 +62,9 @@ resource "google_compute_forwarding_rule" "leaderboard_psc" {
   subnetwork            = google_compute_subnetwork.psc.id
   ip_address            = google_compute_address.leaderboard_psc.id
   target                = google_sql_database_instance.leaderboard.psc_service_attachment_link
+  ip_protocol           = "TCP"
+  ports                 = ["5432"]
+  load_balancing_scheme = null
 }
 
 resource "google_pubsub_topic" "game_results" {
