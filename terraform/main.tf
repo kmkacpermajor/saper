@@ -50,7 +50,7 @@ import {
 
 import {
   to = google_service_networking_connection.private_services
-  id = "project-2f244773-46f8-4097-afe:saper-vpc:servicenetworking.googleapis.com"
+  id = "projects/project-2f244773-46f8-4097-afe/global/networks/saper-vpc:servicenetworking.googleapis.com"
 }
 
 locals {
