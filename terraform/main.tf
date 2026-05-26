@@ -7,6 +7,21 @@ provider "google" {
   region  = var.region
 }
 
+import {
+  to = google_pubsub_topic.game_results
+  id = "projects/project-2f244773-46f8-4097-afe/topics/game-results"
+}
+
+import {
+  to = google_compute_subnetwork.main
+  id = "projects/project-2f244773-46f8-4097-afe/regions/europe-central2/subnetworks/saper-subnet"
+}
+
+import {
+  to = google_pubsub_subscription.leaderboard_game_results
+  id = "projects/project-2f244773-46f8-4097-afe/subscriptions/leaderboard-game-results"
+}
+
 locals {
   backend_service_name        = "saper-backend"
   frontend_service_name       = "saper-frontend"
