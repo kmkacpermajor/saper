@@ -61,7 +61,7 @@ resource "google_compute_forwarding_rule" "leaderboard_psc" {
   network               = google_compute_network.psc.id
   subnetwork            = google_compute_subnetwork.psc.id
   load_balancing_scheme = "INTERNAL"
-  ip_address            = google_compute_address.leaderboard_psc.address
+  ip_address            = google_compute_address.leaderboard_psc.id
   target                = google_sql_database_instance.leaderboard.psc_service_attachment_link
 }
 
@@ -361,5 +361,11 @@ resource "google_project_iam_member" "default_compute_vpc_access_user" {
 resource "google_project_iam_member" "default_compute_network_admin" {
   project = var.project_id
   role    = "roles/compute.networkAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_vpc_access_admin" {
+  project = var.project_id
+  role    = "roles/vpcaccess.admin"
   member  = "serviceAccount:${var.service_account}"
 }
