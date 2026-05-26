@@ -11,8 +11,6 @@ locals {
   backend_service_name        = "saper-backend"
   frontend_service_name       = "saper-frontend"
   leaderboard_service_name    = "saper-leaderboard"
-  backend_runtime_sa_name     = "saper-backend-runner"
-  leaderboard_runtime_sa_name = "saper-leaderboard-runner"
   backend_port                = 8085
   frontend_port               = 3000
   leaderboard_port            = 8090
@@ -152,16 +150,6 @@ resource "google_sql_user" "leaderboard" {
   password = var.database_password
 }
 
-resource "google_service_account" "backend_runtime" {
-  account_id   = local.backend_runtime_sa_name
-  display_name = "Saper backend runtime"
-}
-
-resource "google_service_account" "leaderboard_runtime" {
-  account_id   = local.leaderboard_runtime_sa_name
-  display_name = "Saper leaderboard runtime"
-}
-
 resource "google_cloud_run_v2_service" "backend" {
   name     = local.backend_service_name
   location = var.region
@@ -171,8 +159,6 @@ resource "google_cloud_run_v2_service" "backend" {
     scaling {
       max_instance_count = 1
     }
-
-    service_account = google_service_account.backend_runtime.email
 
     vpc_access {
       connector = google_vpc_access_connector.serverless.id
@@ -225,8 +211,6 @@ resource "google_cloud_run_v2_service" "leaderboard" {
     scaling {
       max_instance_count = 1
     }
-
-    service_account = google_service_account.leaderboard_runtime.email
 
     vpc_access {
       connector = google_vpc_access_connector.serverless.id
@@ -360,17 +344,113 @@ resource "google_cloud_run_v2_service_iam_member" "leaderboard_invoker" {
 resource "google_project_iam_member" "backend_pubsub_publisher" {
   project = var.project_id
   role    = "roles/pubsub.publisher"
-  member  = "serviceAccount:${google_service_account.backend_runtime.email}"
+  member  = "serviceAccount:${var.service_account}"
 }
 
 resource "google_project_iam_member" "leaderboard_pubsub_subscriber" {
   project = var.project_id
   role    = "roles/pubsub.subscriber"
-  member  = "serviceAccount:${google_service_account.leaderboard_runtime.email}"
+  member  = "serviceAccount:${var.service_account}"
 }
 
 resource "google_project_iam_member" "leaderboard_cloudsql_client" {
   project = var.project_id
   role    = "roles/cloudsql.client"
-  member  = "serviceAccount:${google_service_account.leaderboard_runtime.email}"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_artifact_registry_writer" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_cloudbuild_service_account" {
+  project = var.project_id
+  role    = "roles/cloudbuild.builds.builder"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_cloud_run_admin" {
+  project = var.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_cloudsql_admin" {
+  project = var.project_id
+  role    = "roles/cloudsql.admin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_project_iam_admin" {
+  project = var.project_id
+  role    = "roles/resourcemanager.projectIamAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_pubsub_admin" {
+  project = var.project_id
+  role    = "roles/pubsub.admin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_service_account_user" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_storage_object_viewer" {
+  project = var.project_id
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_vpcaccess_admin" {
+  project = var.project_id
+  role    = "roles/vpcaccess.admin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_servicenetworking_admin" {
+  project = var.project_id
+  role    = "roles/servicenetworking.networksAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_compute_network_admin" {
+  project = var.project_id
+  role    = "roles/compute.networkAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_serviceusage_admin" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "terraform_runner_compute_network_admin" {
+  project = var.project_id
+  role    = "roles/compute.networkAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "terraform_runner_vpcaccess_admin" {
+  project = var.project_id
+  role    = "roles/vpcaccess.admin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "terraform_runner_servicenetworking_admin" {
+  project = var.project_id
+  role    = "roles/servicenetworking.networksAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "terraform_runner_serviceusage_admin" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageAdmin"
+  member  = "serviceAccount:${var.service_account}"
 }
