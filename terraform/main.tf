@@ -60,7 +60,6 @@ resource "google_compute_forwarding_rule" "leaderboard_psc" {
   region                = var.region
   network               = google_compute_network.psc.id
   subnetwork            = google_compute_subnetwork.psc.id
-  load_balancing_scheme = "INTERNAL"
   ip_address            = google_compute_address.leaderboard_psc.id
   target                = google_sql_database_instance.leaderboard.psc_service_attachment_link
 }
