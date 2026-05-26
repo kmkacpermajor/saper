@@ -8,6 +8,11 @@ provider "google" {
 }
 
 import {
+  to = google_compute_network.main
+  id = "projects/project-2f244773-46f8-4097-afe/global/networks/saper-vpc"
+}
+
+import {
   to = google_pubsub_topic.game_results
   id = "projects/project-2f244773-46f8-4097-afe/topics/game-results"
 }
