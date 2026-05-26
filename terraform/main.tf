@@ -253,6 +253,11 @@ resource "google_cloud_run_v2_service" "leaderboard" {
       max_instance_count = 1
     }
 
+    vpc_access {
+      connector = google_vpc_access_connector.serverless.id
+      egress    = "PRIVATE_RANGES_ONLY"
+    }
+
     volumes {
       name = "cloudsql"
 
