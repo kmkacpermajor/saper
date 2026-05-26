@@ -13,6 +13,7 @@ export const useGameConnection = () => {
   const connectionType = ref<SetupConnectionType>("create");
   const gameId = ref<string>("");
   const connecting = ref(false);
+  const autoJoinGameId = useState<string | null>("game:auto-join-id", () => null);
 
   const routeGameId = computed(() => String(route.params.id ?? ""));
 
@@ -21,11 +22,11 @@ export const useGameConnection = () => {
     await router.replace("/");
   };
 
-  const connectFromRoute = async (container: HTMLDivElement | null): Promise<void> => {
+  const connectFromRoute = async (container: HTMLDivElement | null, username: string): Promise<void> => {
     loadingIndicator.start({ force: true });
 
     try {
-      await gameSession.connectJoinGame(routeGameId.value, container);
+      await gameSession.connectJoinGame(routeGameId.value, container, username);
     } catch (err: unknown) {
       const message = getErrorMessage(err, "Unknown game connection error.");
       await redirectToIndexWithError(message);
@@ -45,6 +46,7 @@ export const useGameConnection = () => {
     try {
       if (connectionType.value === "create") {
         const connectResponse = await wsClient.sendCreateGame(request);
+        autoJoinGameId.value = String(connectResponse.gameId);
         await navigateTo(`/${connectResponse.gameId}`);
       } else {
         await navigateTo(`/${gameId.value}`);

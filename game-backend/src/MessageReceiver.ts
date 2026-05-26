@@ -3,7 +3,6 @@ import type { RawData, WebSocket } from "ws";
 import type Game from "./Game.js";
 import type GameSessionManager from "./GameSessionManager.js";
 import { log } from "./logger.js";
-import { create } from "node:domain";
 
 const toUint8Array = (message: RawData): Uint8Array => {
   if (message instanceof Buffer) {
@@ -25,12 +24,14 @@ const toUint8Array = (message: RawData): Uint8Array => {
 export default class MessageReceiver {
   private currentGame: Game | null;
   private currentPlayerId: number | null;
+  private username: string;
   private readonly gameSessionManager: GameSessionManager;
   private readonly ws: WebSocket;
 
   constructor(gameSessionManager: GameSessionManager, ws: WebSocket) {
     this.currentGame = null;
     this.currentPlayerId = null;
+    this.username = "Anonymous";
     this.gameSessionManager = gameSessionManager;
     this.ws = ws;
 
@@ -121,13 +122,13 @@ export default class MessageReceiver {
           `[server] Create game request: difficulty=${createPayload.difficulty}, boardSize=${createPayload.boardSize}`
         );
         
-        this.handleCreateGame(createPayload.difficulty, createPayload.boardSize, createPayload.customRows, createPayload.customCols, createPayload.customNumBombs);
+        this.handleCreateGame(createPayload.difficulty, createPayload.boardSize, createPayload.customRows, createPayload.customCols, createPayload.customNumBombs, createPayload.username);
         return;
       }
       case "joinGame": {
         const joinPayload = decodedMessage.payload.joinGame;
         log.debug(`[server] Join game request: gameId=${joinPayload.requestedGameId}`);
-        this.handleJoinGame(joinPayload.requestedGameId);
+        this.handleJoinGame(joinPayload.requestedGameId, joinPayload.username);
         return;
       }
       case "revealTile": {
@@ -206,12 +207,14 @@ export default class MessageReceiver {
     }
   }
 
-  private handleCreateGame(difficulty: Difficulty, boardSize: BoardSize, customRows: number, customCols: number, customNumBombs: number): void {
+  private handleCreateGame(difficulty: Difficulty, boardSize: BoardSize, customRows: number, customCols: number, customNumBombs: number, username: string): void {
+    this.username = username;
     const result = this.gameSessionManager.createNewGame(difficulty, boardSize, customRows, customCols, customNumBombs);
     this.attachGame(result.game, result.error);
   }
 
-  private handleJoinGame(requestedGameId: number): void {
+  private handleJoinGame(requestedGameId: number, username: string): void {
+    this.username = username;
     const result = this.gameSessionManager.getGame(requestedGameId);
     this.attachGame(result.game, result.error);
   }
@@ -229,7 +232,7 @@ export default class MessageReceiver {
 
     log.debug(`[server] Client attached to game ${this.currentGame.gameId}.`);
 
-    this.currentPlayerId = this.currentGame.registerPlayer(this.ws);
+    this.currentPlayerId = this.currentGame.registerPlayer(this.ws, this.username);
     log.debug(
       `[server] Assigned player ${this.currentPlayerId} to game ${this.currentGame.gameId}.`
     );

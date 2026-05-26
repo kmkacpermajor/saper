@@ -6,12 +6,14 @@ export const useGameSetupState = () => {
     const customBoardWidth = useState("gameSetup:custom-board-width", () => 15);
     const customBoardHeight = useState("gameSetup:custom-board-height", () => 15);
     const customNumBombs = useState("gameSetup:custom-num-bombs", () => 15);
+    const username = useState("gameSetup:username", () => "Anonymous");
     
     return {
         boardSize,
         difficulty,
         customBoardWidth,
         customBoardHeight,
-        customNumBombs
+        customNumBombs,
+        username
     };
 }
