@@ -7,27 +7,6 @@ import {
   id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/connectors/saper-run-connector"
 }
 
-removed {
-  from = google_sql_database_instance.leaderboard
-  lifecycle {
-    destroy = false # Tells TF "It's already gone, just forget it"
-  }
-}
-
-removed {
-  from = google_sql_database.leaderboard
-  lifecycle {
-    destroy = false
-  }
-}
-
-removed {
-  from = google_sql_user.leaderboard
-  lifecycle {
-    destroy = false
-  }
-}
-
 provider "google" {
   project = var.project_id
   region  = var.region
@@ -139,42 +118,42 @@ resource "google_pubsub_subscription" "leaderboard_game_results" {
   topic = google_pubsub_topic.game_results.name
 }
 
-resource "google_sql_database_instance" "leaderboard" {
-  name             = local.database_instance_name
-  region           = var.region
-  database_version = "POSTGRES_16"
+# resource "google_sql_database_instance" "leaderboard" {
+#   name             = local.database_instance_name
+#   region           = var.region
+#   database_version = "POSTGRES_16"
 
-  settings {
-    tier              = "db-f1-micro"
-    availability_type = "ZONAL"
-    disk_type         = "PD_SSD"
-    disk_size         = 10
+#   settings {
+#     tier              = "db-f1-micro"
+#     availability_type = "ZONAL"
+#     disk_type         = "PD_SSD"
+#     disk_size         = 10
 
-    backup_configuration {
-      enabled = true
-    }
+#     backup_configuration {
+#       enabled = true
+#     }
 
-    ip_configuration {
-      ipv4_enabled    = false
-      private_network = google_compute_network.main.id 
-    }
-  }
+#     ip_configuration {
+#       ipv4_enabled    = false
+#       private_network = google_compute_network.main.id 
+#     }
+#   }
 
-  deletion_protection = false
+#   deletion_protection = false
 
-  depends_on = [google_service_networking_connection.private_services]
-}
+#   depends_on = [google_service_networking_connection.private_services]
+# }
 
-resource "google_sql_database" "leaderboard" {
-  name     = local.database_name
-  instance = google_sql_database_instance.leaderboard.name
-}
+# resource "google_sql_database" "leaderboard" {
+#   name     = local.database_name
+#   instance = google_sql_database_instance.leaderboard.name
+# }
 
-resource "google_sql_user" "leaderboard" {
-  name     = local.database_user
-  instance = google_sql_database_instance.leaderboard.name
-  password = var.database_password
-}
+# resource "google_sql_user" "leaderboard" {
+#   name     = local.database_user
+#   instance = google_sql_database_instance.leaderboard.name
+#   password = var.database_password
+# }
 
 resource "google_cloud_run_v2_service" "backend" {
   name     = local.backend_service_name
