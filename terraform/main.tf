@@ -7,6 +7,27 @@ import {
   id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/connectors/saper-run-connector"
 }
 
+removed {
+  from = google_sql_database_instance.leaderboard
+  lifecycle {
+    destroy = false # Tells TF "It's already gone, just forget it"
+  }
+}
+
+removed {
+  from = google_sql_database.leaderboard
+  lifecycle {
+    destroy = false
+  }
+}
+
+removed {
+  from = google_sql_user.leaderboard
+  lifecycle {
+    destroy = false
+  }
+}
+
 provider "google" {
   project = var.project_id
   region  = var.region
