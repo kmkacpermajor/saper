@@ -271,7 +271,7 @@ resource "google_cloud_run_v2_service" "leaderboard" {
 
   depends_on = [
     # google_sql_database.leaderboard,
-    google_sql_user.leaderboard,
+    # google_sql_user.leaderboard,
     google_pubsub_subscription.leaderboard_game_results
   ]
 }
