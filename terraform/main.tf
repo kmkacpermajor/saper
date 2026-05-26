@@ -2,11 +2,6 @@ terraform {
   backend "gcs" {}
 }
 
-import {
-  to = google_vpc_access_connector.serverless
-  id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/connectors/saper-run-connector"
-}
-
 provider "google" {
   project = var.project_id
   region  = var.region
@@ -275,7 +270,7 @@ resource "google_cloud_run_v2_service" "leaderboard" {
   }
 
   depends_on = [
-    google_sql_database.leaderboard,
+    # google_sql_database.leaderboard,
     google_sql_user.leaderboard,
     google_pubsub_subscription.leaderboard_game_results
   ]
