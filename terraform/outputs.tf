@@ -13,7 +13,7 @@ output "leaderboard_url" {
   description = "Leaderboard service URL."
 }
 
-output "database_connection_name" {
-  value       = google_sql_database_instance.leaderboard.connection_name
-  description = "Cloud SQL connection name used by Cloud Run."
-}
+# output "database_connection_name" {
+#   value       = google_sql_database_instance.leaderboard.connection_name
+#   description = "Cloud SQL connection name used by Cloud Run."
+# }
