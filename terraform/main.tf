@@ -425,3 +425,27 @@ resource "google_project_iam_member" "default_compute_serviceusage_admin" {
   role    = "roles/serviceusage.serviceUsageAdmin"
   member  = "serviceAccount:${var.service_account}"
 }
+
+resource "google_project_iam_member" "terraform_runner_compute_network_admin" {
+  project = var.project_id
+  role    = "roles/compute.networkAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "terraform_runner_vpcaccess_admin" {
+  project = var.project_id
+  role    = "roles/vpcaccess.admin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "terraform_runner_servicenetworking_admin" {
+  project = var.project_id
+  role    = "roles/servicenetworking.networksAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "terraform_runner_serviceusage_admin" {
+  project = var.project_id
+  role    = "roles/serviceusage.serviceUsageAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
