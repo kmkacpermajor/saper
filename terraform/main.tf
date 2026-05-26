@@ -22,7 +22,7 @@ locals {
 provider "google" {
   project = var.project_id
   region  = var.region
-  impersonate_service_account = var.default_compute_sa
+  impersonate_service_account = local.default_compute_sa
 }
 
 resource "google_pubsub_topic" "game_results" {
