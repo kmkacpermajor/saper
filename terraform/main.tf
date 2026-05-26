@@ -16,52 +16,53 @@ locals {
   leaderboard_port            = 8090
   pubsub_topic_name           = "game-results"
   pubsub_subscription_name    = "leaderboard-game-results"
-  psc_network_name            = "saper-psc-network"
-  psc_subnet_name             = "saper-psc-subnet"
-  psc_subnet_cidr             = "10.20.0.0/24"
-  psc_connector_name          = "saper-psc-connector"
-  psc_connector_cidr          = "10.20.1.0/28"
-  psc_endpoint_name           = "saper-leaderboard-psc"
   database_instance_name      = "saper-leaderboard-postgres"
   database_name               = "minesweeper"
   database_user               = "minesweeper"
   database_connection_string  = "${var.project_id}:${var.region}:${local.database_instance_name}"
-  database_url                = "postgresql://${local.database_user}:${urlencode(var.database_password)}@${google_compute_address.leaderboard_psc.address}:5432/${local.database_name}"
+  database_url                = "postgresql://${local.database_user}:${urlencode(var.database_password)}@/${local.database_name}?host=/cloudsql/${local.database_connection_string}"
+  vpc_name                    = "saper-vpc"
+  vpc_subnet_name             = "saper-subnet"
+  vpc_subnet_cidr             = "10.10.0.0/24"
+  vpc_connector_name          = "saper-run-connector"
+  vpc_connector_cidr          = "10.8.0.0/28"
+  vpc_peering_range_name      = "saper-sql-peering"
+  vpc_peering_range_address   = "10.20.0.0"
+  vpc_peering_range_prefix    = 16
 }
 
-resource "google_compute_network" "psc" {
-  name                    = local.psc_network_name
+resource "google_compute_network" "main" {
+  name                    = local.vpc_name
   auto_create_subnetworks = false
 }
 
-resource "google_compute_subnetwork" "psc" {
-  name          = local.psc_subnet_name
+resource "google_compute_subnetwork" "main" {
+  name          = local.vpc_subnet_name
+  ip_cidr_range = local.vpc_subnet_cidr
   region        = var.region
-  network       = google_compute_network.psc.id
-  ip_cidr_range = local.psc_subnet_cidr
+  network       = google_compute_network.main.id
 }
 
-resource "google_vpc_access_connector" "psc" {
-  name          = local.psc_connector_name
+resource "google_compute_global_address" "private_services" {
+  name          = local.vpc_peering_range_name
+  purpose       = "VPC_PEERING"
+  address_type  = "INTERNAL"
+  address       = local.vpc_peering_range_address
+  prefix_length = local.vpc_peering_range_prefix
+  network       = google_compute_network.main.id
+}
+
+resource "google_service_networking_connection" "private_services" {
+  network                 = google_compute_network.main.id
+  service                 = "servicenetworking.googleapis.com"
+  reserved_peering_ranges = [google_compute_global_address.private_services.name]
+}
+
+resource "google_vpc_access_connector" "serverless" {
+  name          = local.vpc_connector_name
   region        = var.region
-  network       = google_compute_network.psc.name
-  ip_cidr_range = local.psc_connector_cidr
-}
-
-resource "google_compute_address" "leaderboard_psc" {
-  name         = local.psc_endpoint_name
-  region       = var.region
-  subnetwork   = google_compute_subnetwork.psc.id
-  address_type = "INTERNAL"
-}
-
-resource "google_compute_forwarding_rule" "leaderboard_psc" {
-  name                  = local.psc_endpoint_name
-  region                = var.region
-  network               = google_compute_network.psc.id
-  subnetwork            = google_compute_subnetwork.psc.id
-  ip_address            = google_compute_address.leaderboard_psc.id
-  target                = google_sql_database_instance.leaderboard.psc_service_attachment_link
+  network       = google_compute_network.main.id
+  ip_cidr_range = local.vpc_connector_cidr
 }
 
 resource "google_pubsub_topic" "game_results" {
@@ -89,16 +90,14 @@ resource "google_sql_database_instance" "leaderboard" {
     }
 
     ip_configuration {
-      ipv4_enabled = false
-
-      psc_config {
-        psc_enabled               = true
-        allowed_consumer_projects = [var.project_id]
-      }
+      ipv4_enabled  = false
+      private_network = google_compute_network.main.id
     }
   }
 
   deletion_protection = false
+
+  depends_on = [google_service_networking_connection.private_services]
 }
 
 resource "google_sql_database" "leaderboard" {
@@ -120,6 +119,11 @@ resource "google_cloud_run_v2_service" "backend" {
   template {
     scaling {
       max_instance_count = 1
+    }
+
+    vpc_access {
+      connector = google_vpc_access_connector.serverless.id
+      egress    = "PRIVATE_RANGES_ONLY"
     }
 
     containers {
@@ -169,9 +173,12 @@ resource "google_cloud_run_v2_service" "leaderboard" {
       max_instance_count = 1
     }
 
-    vpc_access {
-      connector = google_vpc_access_connector.psc.id
-      egress    = "ALL_TRAFFIC"
+    volumes {
+      name = "cloudsql"
+
+      cloud_sql_instance {
+        instances = [local.database_connection_string]
+      }
     }
 
     containers {
@@ -209,6 +216,11 @@ resource "google_cloud_run_v2_service" "leaderboard" {
       env {
         name  = "DATABASE_URL"
         value = local.database_url
+      }
+
+      volume_mounts {
+        name       = "cloudsql"
+        mount_path = "/cloudsql"
       }
     }
   }
@@ -348,23 +360,5 @@ resource "google_project_iam_member" "default_compute_service_account_user" {
 resource "google_project_iam_member" "default_compute_storage_object_viewer" {
   project = var.project_id
   role    = "roles/storage.objectViewer"
-  member  = "serviceAccount:${var.service_account}"
-}
-
-resource "google_project_iam_member" "default_compute_vpc_access_user" {
-  project = var.project_id
-  role    = "roles/vpcaccess.user"
-  member  = "serviceAccount:${var.service_account}"
-}
-
-resource "google_project_iam_member" "default_compute_network_admin" {
-  project = var.project_id
-  role    = "roles/compute.networkAdmin"
-  member  = "serviceAccount:${var.service_account}"
-}
-
-resource "google_project_iam_member" "default_compute_vpc_access_admin" {
-  project = var.project_id
-  role    = "roles/vpcaccess.admin"
   member  = "serviceAccount:${var.service_account}"
 }
