@@ -8,6 +8,11 @@ variable "project_number" {
   description = "GCP project number."
 }
 
+variable "service_account" {
+  type        = string
+  description = "Service account."
+}
+
 variable "region" {
   type        = string
   description = "GCP region for Cloud Run and Artifact Registry."

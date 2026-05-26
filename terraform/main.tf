@@ -2,6 +2,12 @@ terraform {
   backend "gcs" {}
 }
 
+provider "google" {
+  project = var.project_id
+  region  = var.region
+  impersonate_service_account = var.service_account
+}
+
 locals {
   backend_service_name        = "saper-backend"
   frontend_service_name       = "saper-frontend"
@@ -9,7 +15,6 @@ locals {
   backend_port                = 8085
   frontend_port               = 3000
   leaderboard_port            = 8090
-  default_compute_sa          = "${var.project_number}-compute@developer.gserviceaccount.com"
   pubsub_topic_name           = "game-results"
   pubsub_subscription_name    = "leaderboard-game-results"
   database_instance_name      = "saper-leaderboard-postgres"
@@ -17,12 +22,6 @@ locals {
   database_user               = "minesweeper"
   database_connection_string  = "${var.project_id}:${var.region}:${local.database_instance_name}"
   database_url                = "postgresql://${local.database_user}:${urlencode(var.database_password)}@/${local.database_name}?host=/cloudsql/${local.database_connection_string}"
-}
-
-provider "google" {
-  project = var.project_id
-  region  = var.region
-  impersonate_service_account = local.default_compute_sa
 }
 
 resource "google_pubsub_topic" "game_results" {
@@ -74,8 +73,6 @@ resource "google_cloud_run_v2_service" "backend" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
-    service_account = local.default_compute_sa
-
     scaling {
       max_instance_count = 1
     }
@@ -123,8 +120,6 @@ resource "google_cloud_run_v2_service" "leaderboard" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
-    service_account = local.default_compute_sa
-
     scaling {
       max_instance_count = 1
     }
@@ -199,8 +194,6 @@ resource "google_cloud_run_v2_service" "frontend" {
   ingress  = "INGRESS_TRAFFIC_ALL"
 
   template {
-    service_account = local.default_compute_sa
-
     scaling {
       max_instance_count = 1
     }
@@ -258,17 +251,65 @@ resource "google_cloud_run_v2_service_iam_member" "leaderboard_invoker" {
 resource "google_project_iam_member" "backend_pubsub_publisher" {
   project = var.project_id
   role    = "roles/pubsub.publisher"
-  member  = "serviceAccount:${local.default_compute_sa}"
+  member  = "serviceAccount:${var.service_account}"
 }
 
 resource "google_project_iam_member" "leaderboard_pubsub_subscriber" {
   project = var.project_id
   role    = "roles/pubsub.subscriber"
-  member  = "serviceAccount:${local.default_compute_sa}"
+  member  = "serviceAccount:${var.service_account}"
 }
 
 resource "google_project_iam_member" "leaderboard_cloudsql_client" {
   project = var.project_id
   role    = "roles/cloudsql.client"
-  member  = "serviceAccount:${local.default_compute_sa}"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_artifact_registry_writer" {
+  project = var.project_id
+  role    = "roles/artifactregistry.writer"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_cloudbuild_service_account" {
+  project = var.project_id
+  role    = "roles/cloudbuild.builds.builder"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_cloud_run_admin" {
+  project = var.project_id
+  role    = "roles/run.admin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_cloudsql_admin" {
+  project = var.project_id
+  role    = "roles/cloudsql.admin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_project_iam_admin" {
+  project = var.project_id
+  role    = "roles/resourcemanager.projectIamAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_pubsub_admin" {
+  project = var.project_id
+  role    = "roles/pubsub.admin"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_service_account_user" {
+  project = var.project_id
+  role    = "roles/iam.serviceAccountUser"
+  member  = "serviceAccount:${var.service_account}"
+}
+
+resource "google_project_iam_member" "default_compute_storage_object_viewer" {
+  project = var.project_id
+  role    = "roles/storage.objectViewer"
+  member  = "serviceAccount:${var.service_account}"
 }

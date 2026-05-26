@@ -9,10 +9,6 @@ permissions:
   id-token: write
 
 env:
-  PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
-  PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER }}
-  REGION: ${{ vars.GCP_REGION }}
-
   ARTIFACT_REPO: saper
 
   BACKEND_IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/saper/game-backend
@@ -39,14 +35,14 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
-          project_id: ${{ env.PROJECT_ID }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v3
 
       - name: Configure Docker auth
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -111,7 +107,7 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v3
         with:
-          project_id: ${{ env.PROJECT_ID }}
+          project_id: ${{ vars.GCP_PROJECT_ID }}
           workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
 
       - name: Set up Terraform
@@ -129,9 +125,10 @@ jobs:
       - name: Terraform apply
         working-directory: terraform
         env:
-          TF_VAR_project_id: ${{ env.PROJECT_ID }}
-          TF_VAR_project_number: ${{ env.PROJECT_NUMBER }}
-          TF_VAR_region: ${{ env.REGION }}
+          TF_VAR_project_id: ${{ vars.GCP_PROJECT_ID }}
+          TF_VAR_project_number: ${{ vars.GCP_PROJECT_NUMBER }}
+          TF_VAR_region: ${{ vars.GCP_REGION }}
+          TF_VAR_service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
           TF_VAR_backend_image: ${{ needs.build.outputs.backend_image }}
           TF_VAR_frontend_image: ${{ needs.build.outputs.frontend_image }}
