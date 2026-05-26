@@ -2,11 +2,6 @@ terraform {
   backend "gcs" {}
 }
 
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-
 locals {
   backend_service_name        = "saper-backend"
   frontend_service_name       = "saper-frontend"
@@ -22,6 +17,12 @@ locals {
   database_user               = "minesweeper"
   database_connection_string  = "${var.project_id}:${var.region}:${local.database_instance_name}"
   database_url                = "postgresql://${local.database_user}:${urlencode(var.database_password)}@/${local.database_name}?host=/cloudsql/${local.database_connection_string}"
+}
+
+provider "google" {
+  project = var.project_id
+  region  = var.region
+  impersonate_service_account = var.default_compute_sa
 }
 
 resource "google_pubsub_topic" "game_results" {
