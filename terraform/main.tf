@@ -357,3 +357,9 @@ resource "google_project_iam_member" "default_compute_vpc_access_user" {
   role    = "roles/vpcaccess.user"
   member  = "serviceAccount:${var.service_account}"
 }
+
+resource "google_project_iam_member" "default_compute_network_admin" {
+  project = var.project_id
+  role    = "roles/compute.networkAdmin"
+  member  = "serviceAccount:${var.service_account}"
+}
