@@ -27,6 +27,32 @@ import {
   id = "projects/project-2f244773-46f8-4097-afe/subscriptions/leaderboard-game-results"
 }
 
+import {
+  to = google_compute_global_address.private_services
+  id = "projects/project-2f244773-46f8-4097-afe/global/addresses/saper-sql-peering"
+}
+
+import {
+  to = google_cloud_run_v2_service.backend
+  id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/services/saper-backend"
+}
+
+# Prawdopodobnie te też będą potrzebne za chwilę:
+import {
+  to = google_cloud_run_v2_service.frontend
+  id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/services/saper-frontend"
+}
+
+import {
+  to = google_cloud_run_v2_service.leaderboard
+  id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/services/saper-leaderboard"
+}
+
+import {
+  to = google_service_networking_connection.private_services
+  id = "project-2f244773-46f8-4097-afe:saper-vpc:servicenetworking.googleapis.com"
+}
+
 locals {
   backend_service_name        = "saper-backend"
   frontend_service_name       = "saper-frontend"
