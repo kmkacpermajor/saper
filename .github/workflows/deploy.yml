@@ -12,9 +12,13 @@ env:
   PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
   PROJECT_NUMBER: ${{ vars.GCP_PROJECT_NUMBER }}
   REGION: ${{ vars.GCP_REGION }}
+
   ARTIFACT_REPO: saper
+
   BACKEND_IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/saper/game-backend
   FRONTEND_IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/saper/frontend
+  LEADERBOARD_IMAGE_BASE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/saper/leaderboard-backend
+
   TF_STATE_BUCKET: saper-tfstate-${{ vars.GCP_PROJECT_ID }}
   TF_STATE_PREFIX: prod
 
@@ -22,9 +26,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     environment: production
+
     outputs:
       backend_image: ${{ steps.image_refs.outputs.backend_image }}
       frontend_image: ${{ steps.image_refs.outputs.frontend_image }}
+      leaderboard_image: ${{ steps.image_refs.outputs.leaderboard_image }}
 
     steps:
       - name: Checkout
@@ -45,6 +51,9 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
+      #
+      # BACKEND
+      #
       - name: Build and push backend image
         id: build_backend
         uses: docker/build-push-action@v7
@@ -54,6 +63,9 @@ jobs:
           push: true
           tags: ${{ env.BACKEND_IMAGE_BASE }}:${{ github.sha }}
 
+      #
+      # FRONTEND
+      #
       - name: Build and push frontend image
         id: build_frontend
         uses: docker/build-push-action@v7
@@ -63,11 +75,29 @@ jobs:
           push: true
           tags: ${{ env.FRONTEND_IMAGE_BASE }}:${{ github.sha }}
 
+      #
+      # LEADERBOARD
+      #
+      - name: Build and push leaderboard image
+        id: build_leaderboard
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: leaderboard-backend/Dockerfile
+          push: true
+          tags: ${{ env.LEADERBOARD_IMAGE_BASE }}:${{ github.sha }}
+
+      #
+      # IMAGE DIGESTS
+      #
       - name: Capture image digests
         id: image_refs
         run: |
           echo "backend_image=${{ env.BACKEND_IMAGE_BASE }}@${{ steps.build_backend.outputs.digest }}" >> "$GITHUB_OUTPUT"
+
           echo "frontend_image=${{ env.FRONTEND_IMAGE_BASE }}@${{ steps.build_frontend.outputs.digest }}" >> "$GITHUB_OUTPUT"
+
+          echo "leaderboard_image=${{ env.LEADERBOARD_IMAGE_BASE }}@${{ steps.build_leaderboard.outputs.digest }}" >> "$GITHUB_OUTPUT"
 
   apply:
     runs-on: ubuntu-latest
@@ -91,7 +121,10 @@ jobs:
 
       - name: Terraform init
         working-directory: terraform
-        run: terraform init -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" -backend-config="prefix=${{ env.TF_STATE_PREFIX }}"
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
+            -backend-config="prefix=${{ env.TF_STATE_PREFIX }}"
 
       - name: Terraform apply
         working-directory: terraform
@@ -99,6 +132,11 @@ jobs:
           TF_VAR_project_id: ${{ env.PROJECT_ID }}
           TF_VAR_project_number: ${{ env.PROJECT_NUMBER }}
           TF_VAR_region: ${{ env.REGION }}
+
           TF_VAR_backend_image: ${{ needs.build.outputs.backend_image }}
           TF_VAR_frontend_image: ${{ needs.build.outputs.frontend_image }}
+          TF_VAR_leaderboard_image: ${{ needs.build.outputs.leaderboard_image }}
+
+          TF_VAR_database_password: ${{ secrets.DATABASE_PASSWORD }}
+
         run: terraform apply -input=false -auto-approve

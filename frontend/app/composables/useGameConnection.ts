@@ -13,7 +13,6 @@ export const useGameConnection = () => {
   const connectionType = ref<SetupConnectionType>("create");
   const gameId = ref<string>("");
   const connecting = ref(false);
-  const autoJoinGameId = useState<string | null>("game:auto-join-id", () => null);
 
   const routeGameId = computed(() => String(route.params.id ?? ""));
 
@@ -46,7 +45,6 @@ export const useGameConnection = () => {
     try {
       if (connectionType.value === "create") {
         const connectResponse = await wsClient.sendCreateGame(request);
-        autoJoinGameId.value = String(connectResponse.gameId);
         await navigateTo(`/${connectResponse.gameId}`);
       } else {
         await navigateTo(`/${gameId.value}`);

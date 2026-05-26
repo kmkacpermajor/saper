@@ -6,7 +6,6 @@ const isQrCodeOpen = ref(false);
 const joining = ref(false);
 const joinError = ref<string | null>(null);
 const joined = ref(false);
-const autoJoinGameId = useState<string | null>("game:auto-join-id", () => null);
 
 const onJoin = async (): Promise<void> => {
   if (joining.value) {
@@ -19,19 +18,12 @@ const onJoin = async (): Promise<void> => {
   try {
     await connectFromRoute(gameCanvasContainer.value, username.value);
     joined.value = true;
-    autoJoinGameId.value = null;
   } catch (error: unknown) {
     joinError.value = getErrorMessage(error, "Could not join game.");
   } finally {
     joining.value = false;
   }
 };
-
-onMounted(() => {
-  if (autoJoinGameId.value === routeGameId.value) {
-    void onJoin();
-  }
-});
 
 onBeforeUnmount(() => {
   disconnectRouteGame();

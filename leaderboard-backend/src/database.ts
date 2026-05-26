@@ -12,6 +12,11 @@ export type LeaderboardEntry = {
   completedAt: string;
 };
 
+export type LeaderboardPage = {
+  entries: LeaderboardEntry[];
+  totalEntries: number;
+};
+
 export type GameResult = {
   gameId: number;
   levelCode: string;
@@ -70,7 +75,27 @@ export default class Database {
     );
   }
 
-  async listEntries(levelCode: string, limit: number): Promise<LeaderboardEntry[]> {
+  async listEntries(levelCode: string, limit: number, offset: number, maxEntries: number): Promise<LeaderboardPage> {
+    const countResult = await this.pool.query<{ total_entries: string }>(
+      `
+        SELECT count(*) AS total_entries
+        FROM leaderboard_entries
+        WHERE level_code = $1
+      `,
+      [levelCode]
+    );
+
+    const totalEntries = Math.min(Number(countResult.rows[0]?.total_entries ?? 0), maxEntries);
+    const remainingEntries = Math.max(0, totalEntries - offset);
+    const pageLimit = Math.min(limit, remainingEntries);
+
+    if (pageLimit === 0) {
+      return {
+        entries: [],
+        totalEntries
+      };
+    }
+
     const queryResult = await this.pool.query<{
       id: string;
       rank: string;
@@ -91,18 +116,22 @@ export default class Database {
         WHERE level_code = $1
         ORDER BY time_ms ASC, completed_at ASC, id ASC
         LIMIT $2
+        OFFSET $3
       `,
-      [levelCode, limit]
+      [levelCode, pageLimit, offset]
     );
 
-    return queryResult.rows.map((row) => ({
-      id: Number(row.id),
-      rank: Number(row.rank),
-      levelCode: row.level_code,
-      playerNames: row.player_names,
-      timeMs: row.time_ms,
-      completedAt: row.completed_at.toISOString()
-    }));
+    return {
+      entries: queryResult.rows.map((row) => ({
+        id: Number(row.id),
+        rank: Number(row.rank),
+        levelCode: row.level_code,
+        playerNames: row.player_names,
+        timeMs: row.time_ms,
+        completedAt: row.completed_at.toISOString()
+      })),
+      totalEntries
+    };
   }
 
   async close(): Promise<void> {

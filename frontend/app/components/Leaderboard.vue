@@ -2,7 +2,7 @@
 import { BoardSize, Difficulty } from "@saper/contracts";
 
 const { boardSize, difficulty } = useGameSetupState();
-const { entries, loading, error, levelCode } = useLeaderboardEntries();
+const { entries, loading, error, levelCode, currentPage, totalPages, totalEntries } = useLeaderboardEntries();
 
 const boardSizeOptions = [
   { value: BoardSize.SMALL, label: "Small" },
@@ -17,6 +17,10 @@ const difficultyOptions = [
   { value: Difficulty.HARD, label: "Hard" },
   { value: Difficulty.EXPERT, label: "Expert" }
 ];
+
+const pages = computed(() =>
+  Array.from({ length: totalPages.value }, (_, index) => index + 1)
+);
 </script>
 
 <template>
@@ -48,7 +52,7 @@ const difficultyOptions = [
 
     <div class="flex items-center justify-between bg-slate-50 px-5 py-3 text-sm text-slate-600 dark:bg-slate-950/40 dark:text-slate-300">
       <span>Level {{ levelCode ?? "-" }}</span>
-      <span>Best time wins</span>
+      <span>Top {{ totalEntries }} results</span>
     </div>
 
     <div class="overflow-x-auto">
@@ -81,6 +85,29 @@ const difficultyOptions = [
           </template>
         </tbody>
       </table>
+    </div>
+
+    <div v-if="totalPages > 1" class="flex items-center justify-between border-t border-slate-200 px-5 py-3 dark:border-slate-800">
+      <button type="button" :disabled="currentPage === 1 || loading"
+        class="rounded-md border border-slate-300 px-3 py-1 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        @click="currentPage--">
+        Previous
+      </button>
+
+      <div class="flex gap-1">
+        <button v-for="page in pages" :key="page" type="button"
+          class="h-8 w-8 rounded-md text-sm font-semibold transition"
+          :class="page === currentPage ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'"
+          @click="currentPage = page">
+          {{ page }}
+        </button>
+      </div>
+
+      <button type="button" :disabled="currentPage === totalPages || loading"
+        class="rounded-md border border-slate-300 px-3 py-1 text-sm font-medium text-slate-600 transition hover:bg-slate-100 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+        @click="currentPage++">
+        Next
+      </button>
     </div>
   </div>
 </template>

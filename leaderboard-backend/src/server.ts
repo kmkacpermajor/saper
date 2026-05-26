@@ -3,16 +3,25 @@ import Database from "./database.js";
 import { isRankedLevelCode, rankedLevelCodes } from "./levels.js";
 import { log } from "./logger.js";
 
-const DEFAULT_LIMIT = 10;
-const MAX_LIMIT = 100;
+const PAGE_SIZE = 10;
+const MAX_ENTRIES = 100;
 
 const parseLimit = (value: string | null): number => {
   const limit = Number(value);
   if (!Number.isInteger(limit) || limit <= 0) {
-    return DEFAULT_LIMIT;
+    return PAGE_SIZE;
   }
 
-  return Math.min(limit, MAX_LIMIT);
+  return Math.min(limit, PAGE_SIZE);
+};
+
+const parsePage = (value: string | null): number => {
+  const page = Number(value);
+  if (!Number.isInteger(page) || page <= 0) {
+    return 1;
+  }
+
+  return Math.min(page, MAX_ENTRIES / PAGE_SIZE);
 };
 
 const sendJson = (response: http.ServerResponse, statusCode: number, body: unknown): void => {
@@ -57,9 +66,17 @@ export const createServer = (database: Database): http.Server =>
       }
 
       const limit = parseLimit(url.searchParams.get("limit"));
+      const page = parsePage(url.searchParams.get("page"));
+      const offset = (page - 1) * limit;
       void database
-        .listEntries(levelCode, limit)
-        .then((entries) => sendJson(response, 200, { entries }))
+        .listEntries(levelCode, limit, offset, MAX_ENTRIES)
+        .then(({ entries, totalEntries }) => sendJson(response, 200, {
+          entries,
+          page,
+          pageSize: limit,
+          totalEntries,
+          totalPages: Math.ceil(totalEntries / limit)
+        }))
         .catch((error: unknown) => {
           log.error({ err: error }, "[leaderboard] Failed to list entries.");
           sendJson(response, 500, { error: "Could not load leaderboard." });
