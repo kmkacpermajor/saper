@@ -37,6 +37,11 @@ import {
   id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/services/saper-backend"
 }
 
+import {
+  to = google_cloud_run_v2_service.leaderboard
+  id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/services/saper-leaderboard"
+}
+
 # Prawdopodobnie te też będą potrzebne za chwilę:
 import {
   to = google_cloud_run_v2_service.frontend
