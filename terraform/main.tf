@@ -53,6 +53,16 @@ import {
   id = "projects/project-2f244773-46f8-4097-afe/instances/saper-leaderboard-postgres"
 }
 
+import {
+  to = google_sql_database.leaderboard
+  id = "projects/project-2f244773-46f8-4097-afe/instances/saper-leaderboard-postgres/databases/minesweeper"
+}
+
+import {
+  to = google_sql_user.leaderboard
+  id = "projects/project-2f244773-46f8-4097-afe/instances/saper-leaderboard-postgres/users/minesweeper"
+}
+
 locals {
   backend_service_name        = "saper-backend"
   frontend_service_name       = "saper-frontend"
