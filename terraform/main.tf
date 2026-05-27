@@ -2,6 +2,35 @@ terraform {
   backend "gcs" {}
 }
 
+import {
+  to = google_compute_network.main
+  id = "projects/project-2f244773-46f8-4097-afe/global/networks/saper-vpc"
+}
+
+# 2. Import the Subnet
+import {
+  to = google_compute_subnetwork.main
+  id = "projects/project-2f244773-46f8-4097-afe/regions/europe-central2/subnetworks/saper-subnet"
+}
+
+# 3. Import the Pub/Sub Topic
+import {
+  to = google_pubsub_topic.game_results
+  id = "projects/project-2f244773-46f8-4097-afe/topics/game-results"
+}
+
+# 4. Import the VPC Connector (Ensure name matches)
+import {
+  to = google_vpc_access_connector.serverless
+  id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/connectors/saper-run-connector"
+}
+
+# 5. Import the Global Address for SQL Peering
+import {
+  to = google_compute_global_address.private_services
+  id = "projects/project-2f244773-46f8-4097-afe/global/addresses/saper-sql-peering"
+}
+
 provider "google" {
   project = var.project_id
   region  = var.region
