@@ -48,6 +48,12 @@ import {
   id = "projects/project-2f244773-46f8-4097-afe/global/networks/saper-vpc:servicenetworking.googleapis.com"
 }
 
+import {
+  to = google_sql_database_instance.leaderboard
+  id = "projects/project-2f244773-46f8-4097-afe/europe-central2/saper-leaderboard-postgres"
+
+}
+
 locals {
   backend_service_name        = "saper-backend"
   frontend_service_name       = "saper-frontend"
