@@ -50,8 +50,7 @@ import {
 
 import {
   to = google_sql_database_instance.leaderboard
-  id = "projects/project-2f244773-46f8-4097-afe/europe-central2/saper-leaderboard-postgres"
-
+  id = "projects/project-2f244773-46f8-4097-afe/instances/saper-leaderboard-postgres"
 }
 
 locals {
