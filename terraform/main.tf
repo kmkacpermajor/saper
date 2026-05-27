@@ -7,67 +7,6 @@ provider "google" {
   region  = var.region
 }
 
-import {
-  to = google_compute_network.main
-  id = "projects/project-2f244773-46f8-4097-afe/global/networks/saper-vpc"
-}
-
-import {
-  to = google_pubsub_topic.game_results
-  id = "projects/project-2f244773-46f8-4097-afe/topics/game-results"
-}
-
-import {
-  to = google_compute_subnetwork.main
-  id = "projects/project-2f244773-46f8-4097-afe/regions/europe-central2/subnetworks/saper-subnet"
-}
-
-import {
-  to = google_pubsub_subscription.leaderboard_game_results
-  id = "projects/project-2f244773-46f8-4097-afe/subscriptions/leaderboard-game-results"
-}
-
-import {
-  to = google_compute_global_address.private_services
-  id = "projects/project-2f244773-46f8-4097-afe/global/addresses/saper-sql-peering"
-}
-
-import {
-  to = google_cloud_run_v2_service.backend
-  id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/services/saper-backend"
-}
-
-import {
-  to = google_cloud_run_v2_service.leaderboard
-  id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/services/saper-leaderboard"
-}
-
-# Prawdopodobnie te też będą potrzebne za chwilę:
-import {
-  to = google_cloud_run_v2_service.frontend
-  id = "projects/project-2f244773-46f8-4097-afe/locations/europe-central2/services/saper-frontend"
-}
-
-import {
-  to = google_service_networking_connection.private_services
-  id = "projects/project-2f244773-46f8-4097-afe/global/networks/saper-vpc:servicenetworking.googleapis.com"
-}
-
-import {
-  to = google_sql_database_instance.leaderboard
-  id = "projects/project-2f244773-46f8-4097-afe/instances/saper-leaderboard-postgres"
-}
-
-import {
-  to = google_sql_database.leaderboard
-  id = "projects/project-2f244773-46f8-4097-afe/instances/saper-leaderboard-postgres/databases/minesweeper"
-}
-
-import {
-  to = google_sql_user.leaderboard
-  id = "projects/project-2f244773-46f8-4097-afe/instances/saper-leaderboard-postgres/users/minesweeper"
-}
-
 locals {
   backend_service_name        = "saper-backend"
   frontend_service_name       = "saper-frontend"
