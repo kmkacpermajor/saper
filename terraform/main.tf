@@ -160,6 +160,8 @@ resource "google_cloud_run_v2_service" "backend" {
       max_instance_count = 1
     }
 
+    service_account = var.service_account
+
     vpc_access {
       connector = google_vpc_access_connector.serverless.id
       egress    = "PRIVATE_RANGES_ONLY"
@@ -211,6 +213,8 @@ resource "google_cloud_run_v2_service" "leaderboard" {
     scaling {
       max_instance_count = 1
     }
+
+    service_account = var.service_account
 
     vpc_access {
       connector = google_vpc_access_connector.serverless.id
@@ -290,6 +294,8 @@ resource "google_cloud_run_v2_service" "frontend" {
     scaling {
       max_instance_count = 1
     }
+
+    service_account = var.service_account
 
     containers {
       image = var.frontend_image
