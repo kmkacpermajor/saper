@@ -1,6 +1,6 @@
 # Minesweeper Cloud
 
-Minesweeper Cloud is a web-based multiplayer Minesweeper project deployed on Google Cloud Platform. The application is split into three small services: a Nuxt frontend, a WebSocket game backend, and a leaderboard backend. The services communicate through explicit APIs
+Minesweeper Cloud is a web-based multiplayer Minesweeper game project deployed on Google Cloud Platform. The application is split into three small services: a Nuxt frontend, a WebSocket game backend, and a leaderboard backend. The services communicate through explicit APIs
 and use Google Pub/Sub plus Cloud SQL to store won game results.
 
 The main idea is simple: the game should feel real-time while people are playing, but leaderboard storage should be handled separately so the game server is not responsible for database work.
